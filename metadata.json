@@ -1,0 +1,6 @@
+{
+  "name": "GudangKu WMS",
+  "description": "Sistem manajemen material gudang real-time dengan autentikasi staf, master data material, transaksi inbound/outbound, dan dukungan PWA.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
