@@ -9,15 +9,18 @@ import { MaterialsView } from './components/MaterialsView';
 import { ToastContainer } from './components/ToastContainer';
 import { TransactionModal } from './components/TransactionModal';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
-import type {
-  CreateMaterialInput,
-  Material,
-  StockLog,
-  StockStatus,
-  StockTransactionInput,
-  ToastMessage,
-  TransactionType,
-  UpdateMaterialInput,
+import {
+  getAccessRoleLabel,
+  type AccessLevel,
+  type CreateMaterialInput,
+  type Material,
+  type StockLog,
+  type StockStatus,
+  type StockTransactionInput,
+  type ToastMessage,
+  type TransactionType,
+  type UpdateMaterialInput,
+  type UserProfile,
 } from './types/warehouse';
 import { getStockStatus } from './utils/warehouse';
 
@@ -30,7 +33,9 @@ function mapMaterialRow(row: any): Material {
     unit: row.unit,
     currentStock: Number(row.current_stock ?? 0),
     minStock: Number(row.min_stock ?? 0),
-    location: row.location,
+    location: row.location ?? '',
+    updatedAt: row.updated_at ?? '',
+    createdAt: row.created_at ?? '',
   };
 }
 
@@ -64,6 +69,9 @@ export default function App() {
 
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [materialsStatusFilter, setMaterialsStatusFilter] = useState<StockStatus | 'ALL'>('ALL');
@@ -136,6 +144,74 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Ambil profil, level, dan izin akses pengguna yang sedang login
+  useEffect(() => {
+    if (!supabase || !session?.user) {
+      setProfile(null);
+      setProfileLoading(false);
+      return;
+    }
+
+    let active = true;
+    setProfileLoading(true);
+
+    supabase
+      .from('profiles')
+      .select('id, username, full_name, email, role, can_edit')
+      .eq('id', session.user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!active) return;
+
+        const roleValue = (data?.role as AccessLevel) || 'viewer';
+        const canEditValue =
+          typeof data?.can_edit === 'boolean'
+            ? data.can_edit
+            : roleValue === 'admin' || roleValue === 'editor';
+
+        const fallbackEmail = session.user.email ?? '';
+        const fallbackUsername = fallbackEmail.split('@')[0] || 'user';
+
+        setProfile({
+          id: session.user.id,
+          username: data?.username || fallbackUsername,
+          fullName: data?.full_name || data?.username || fallbackUsername,
+          email: data?.email || fallbackEmail,
+          role: roleValue,
+          canEdit: canEditValue,
+        });
+        setProfileLoading(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        const fallbackEmail = session.user.email ?? '';
+        const fallbackUsername = fallbackEmail.split('@')[0] || 'user';
+        setProfile({
+          id: session.user.id,
+          username: fallbackUsername,
+          fullName: fallbackUsername,
+          email: fallbackEmail,
+          role: 'viewer',
+          canEdit: false,
+        });
+        setProfileLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [session]);
+
+  const canEdit = Boolean(profile?.canEdit);
+
+  const assertCanEdit = useCallback(() => {
+    if (!canEdit) {
+      const msg = 'Akun Anda berstatus Hanya Lihat dan tidak memiliki izin mengubah data.';
+      pushToast('error', 'Akses Ditolak', msg);
+      throw new Error(msg);
+    }
+  }, [canEdit, pushToast]);
+
   const fetchWarehouseData = useCallback(async () => {
     if (!supabase || !session) {
       setMaterials([]);
@@ -176,6 +252,7 @@ export default function App() {
       await supabase.auth.signOut();
     }
     setSession(null);
+    setProfile(null);
     setActiveTab('dashboard');
   }, []);
 
@@ -184,11 +261,18 @@ export default function App() {
     [materials]
   );
 
-  const handleOpenTransaction = useCallback((type: TransactionType, materialId?: string) => {
-    setTxInitialType(type);
-    setTxInitialMaterialId(materialId);
-    setTxModalOpen(true);
-  }, []);
+  const handleOpenTransaction = useCallback(
+    (type: TransactionType, materialId?: string) => {
+      if (!canEdit) {
+        pushToast('info', 'Mode Hanya Lihat', 'Akun Anda tidak memiliki izin mencatat transaksi.');
+        return;
+      }
+      setTxInitialType(type);
+      setTxInitialMaterialId(materialId);
+      setTxModalOpen(true);
+    },
+    [canEdit, pushToast]
+  );
 
   const handleNavigateMaterials = useCallback((statusFilter: StockStatus | 'ALL' = 'ALL') => {
     setMaterialsStatusFilter(statusFilter);
@@ -197,8 +281,12 @@ export default function App() {
 
   const handleCreateMaterial = useCallback(
     async (input: CreateMaterialInput) => {
+      assertCanEdit();
+
       if (!supabase) {
-        throw new Error('Konfigurasi Supabase belum terbaca (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).');
+        throw new Error(
+          'Konfigurasi Supabase belum terbaca (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).'
+        );
       }
 
       const newId = `mat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -225,13 +313,17 @@ export default function App() {
       await fetchWarehouseData();
       pushToast('success', 'Material berhasil ditambahkan', `${created.sku} — ${created.name}`);
     },
-    [fetchWarehouseData, pushToast]
+    [assertCanEdit, fetchWarehouseData, pushToast]
   );
 
   const handleUpdateMaterial = useCallback(
     async (id: string, input: UpdateMaterialInput) => {
+      assertCanEdit();
+
       if (!supabase) {
-        throw new Error('Konfigurasi Supabase belum terbaca (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).');
+        throw new Error(
+          'Konfigurasi Supabase belum terbaca (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).'
+        );
       }
 
       const { data, error } = await supabase
@@ -257,13 +349,17 @@ export default function App() {
       await fetchWarehouseData();
       pushToast('success', 'Data material diperbarui', `${updated.sku} — ${updated.name}`);
     },
-    [fetchWarehouseData, pushToast]
+    [assertCanEdit, fetchWarehouseData, pushToast]
   );
 
   const handleSubmitTransaction = useCallback(
     async (payload: StockTransactionInput) => {
+      assertCanEdit();
+
       if (!supabase) {
-        throw new Error('Konfigurasi Supabase belum terbaca (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).');
+        throw new Error(
+          'Konfigurasi Supabase belum terbaca (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).'
+        );
       }
 
       const target = materials.find((m) => m.id === payload.materialId);
@@ -296,7 +392,11 @@ export default function App() {
       }
 
       const defaultPic =
-        payload.pic?.trim() || session?.user?.email?.split('@')[0] || 'Staf Gudang';
+        payload.pic?.trim() ||
+        profile?.fullName ||
+        profile?.username ||
+        session?.user?.email?.split('@')[0] ||
+        'Staf Gudang';
       const logId = `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
       const { data: logRow, error: logErr } = await supabase
@@ -316,149 +416,4 @@ export default function App() {
           notes: payload.notes?.trim() ?? '',
         })
         .select()
-        .single();
-
-      if (logErr) {
-        throw new Error(logErr.message || 'Gagal mencatat logbook transaksi.');
-      }
-
-      await fetchWarehouseData();
-      const log = mapLogRow(logRow);
-      pushToast(
-        'success',
-        log.type === 'MASUK' ? 'Stok Masuk Tercatat' : 'Stok Keluar Tercatat',
-        `${log.materialName}: ${log.type === 'MASUK' ? '+' : '-'}${log.quantity} ${log.materialUnit} (Stok akhir: ${log.stockAfter} ${log.materialUnit})`
-      );
-    },
-    [materials, session, fetchWarehouseData, pushToast]
-  );
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-300 text-sm font-medium">
-        Memeriksa sesi login...
-      </div>
-    );
-  }
-
-  if (!isSupabaseConfigured || !supabase) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-200">
-        <div className="max-w-lg w-full rounded-2xl border border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-900 p-6 space-y-3">
-          <h1 className="text-base font-bold text-amber-700 dark:text-amber-400">
-            Konfigurasi Supabase Belum Terbaca
-          </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            Pastikan variabel <strong>VITE_SUPABASE_URL</strong> dan{' '}
-            <strong>VITE_SUPABASE_ANON_KEY</strong> sudah diatur sebagai <strong>Config</strong> di
-            pengaturan environment lalu lakukan <strong>Redeploy</strong> ulang.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return (
-      <>
-        <LoginView theme={theme} onToggleTheme={toggleTheme} />
-        <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-      </>
-    );
-  }
-
-  return (
-    <>
-      <AppShell
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-        onOpenTransaction={(type) => handleOpenTransaction(type)}
-        criticalCount={criticalCount}
-      >
-        {/* Bar info user login & tombol Keluar */}
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs">
-          <div className="text-slate-600 dark:text-slate-300 truncate">
-            Login sebagai: <strong className="font-semibold">{session.user.email}</strong>
-          </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="px-3 py-1.5 rounded-xl font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-          >
-            Keluar
-          </button>
-        </div>
-
-        {loadError && (
-          <div
-            role="alert"
-            className="mb-5 p-4 rounded-2xl bg-[#FEE2E2] text-[#B91C1C] border border-[#FCA5A5] dark:bg-[#7F1D1D] dark:text-[#F87171] dark:border-[#991B1B] flex items-center justify-between gap-4"
-          >
-            <span className="text-sm font-semibold">{loadError}</span>
-            <button
-              type="button"
-              onClick={fetchWarehouseData}
-              className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white/80 dark:bg-black/30 hover:bg-white cursor-pointer whitespace-nowrap"
-            >
-              Muat Ulang
-            </button>
-          </div>
-        )}
-
-        {activeTab === 'dashboard' && (
-          <DashboardView
-            materials={materials}
-            logs={logs}
-            isLoading={isLoading}
-            onQuickTransaction={handleOpenTransaction}
-            onNavigateMaterials={handleNavigateMaterials}
-            onNavigateLogbook={() => setActiveTab('logbook')}
-          />
-        )}
-
-        {activeTab === 'materials' && (
-          <MaterialsView
-            materials={materials}
-            statusFilter={materialsStatusFilter}
-            onStatusFilterChange={setMaterialsStatusFilter}
-            onAddMaterial={() => {
-              setEditingMaterial(null);
-              setMatModalOpen(true);
-            }}
-            onEditMaterial={(mat) => {
-              setEditingMaterial(mat);
-              setMatModalOpen(true);
-            }}
-            onQuickTransaction={handleOpenTransaction}
-          />
-        )}
-
-        {activeTab === 'logbook' && <LogbookView logs={logs} />}
-      </AppShell>
-
-      <TransactionModal
-        isOpen={txModalOpen}
-        initialType={txInitialType}
-        initialMaterialId={txInitialMaterialId}
-        materials={materials}
-        onClose={() => setTxModalOpen(false)}
-        onSubmit={handleSubmitTransaction}
-      />
-
-      <MaterialFormModal
-        isOpen={matModalOpen}
-        editingMaterial={editingMaterial}
-        onClose={() => {
-          setMatModalOpen(false);
-          setEditingMaterial(null);
-        }}
-        onCreate={handleCreateMaterial}
-        onUpdate={handleUpdateMaterial}
-      />
-
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-    </>
-  );
-}
+        .single

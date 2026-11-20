@@ -75,3 +75,25 @@ export interface ToastMessage {
   title: string;
   description?: string;
 }
+
+export type AccessLevel = 'admin' | 'editor' | 'viewer';
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  fullName: string;
+  email: string;
+  role: AccessLevel;
+  canEdit: boolean;
+}
+
+export function getAccessRoleLabel(role?: string): string {
+  switch (role) {
+    case 'admin':
+      return 'Administrator';
+    case 'editor':
+      return 'Operator / Editor';
+    default:
+      return 'Pengamat / Viewer';
+  }
+}
