@@ -51,15 +51,13 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
       return clean;
     }
 
-    if (supabase) {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('username', clean)
-        .maybeSingle();
+         if (supabase) {
+      const { data, error } = await supabase.rpc('get_login_email', {
+        p_username: clean,
+      });
 
-      if (!error && data?.email) {
-        return String(data.email).trim().toLowerCase();
+      if (!error && data) {
+        return String(data).trim().toLowerCase();
       }
     }
 
