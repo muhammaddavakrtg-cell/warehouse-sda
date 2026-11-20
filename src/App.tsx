@@ -8,7 +8,7 @@ import { MaterialFormModal } from './components/MaterialFormModal';
 import { MaterialsView } from './components/MaterialsView';
 import { ToastContainer } from './components/ToastContainer';
 import { TransactionModal } from './components/TransactionModal';
-import { supabase } from './lib/supabase';
+import { isSupabaseConfigured, supabase } from './lib/supabase';
 import type {
   CreateMaterialInput,
   Material,
@@ -115,6 +115,12 @@ export default function App() {
 
   // Pantau status sesi login Supabase
   useEffect(() => {
+    if (!supabase) {
+      setSession(null);
+      setAuthLoading(false);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setAuthLoading(false);
@@ -131,7 +137,7 @@ export default function App() {
   }, []);
 
   const fetchWarehouseData = useCallback(async () => {
-    if (!session) {
+    if (!supabase || !session) {
       setMaterials([]);
       setLogs([]);
       setIsLoading(false);
@@ -166,7 +172,10 @@ export default function App() {
   }, [fetchWarehouseData]);
 
   const handleLogout = useCallback(async () => {
-    await supabase.auth.signOut();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    setSession(null);
     setActiveTab('dashboard');
   }, []);
 
@@ -188,6 +197,10 @@ export default function App() {
 
   const handleCreateMaterial = useCallback(
     async (input: CreateMaterialInput) => {
+      if (!supabase) {
+        throw new Error('Konfigurasi Supabase belum terbaca (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).');
+      }
+
       const newId = `mat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       const { data, error } = await supabase
         .from('materials')
@@ -217,6 +230,10 @@ export default function App() {
 
   const handleUpdateMaterial = useCallback(
     async (id: string, input: UpdateMaterialInput) => {
+      if (!supabase) {
+        throw new Error('Konfigurasi Supabase belum terbaca (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).');
+      }
+
       const { data, error } = await supabase
         .from('materials')
         .update({
@@ -245,6 +262,10 @@ export default function App() {
 
   const handleSubmitTransaction = useCallback(
     async (payload: StockTransactionInput) => {
+      if (!supabase) {
+        throw new Error('Konfigurasi Supabase belum terbaca (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).');
+      }
+
       const target = materials.find((m) => m.id === payload.materialId);
       if (!target) {
         throw new Error('Material tidak ditemukan.');
@@ -316,6 +337,23 @@ export default function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-300 text-sm font-medium">
         Memeriksa sesi login...
+      </div>
+    );
+  }
+
+  if (!isSupabaseConfigured || !supabase) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-200">
+        <div className="max-w-lg w-full rounded-2xl border border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-900 p-6 space-y-3">
+          <h1 className="text-base font-bold text-amber-700 dark:text-amber-400">
+            Konfigurasi Supabase Belum Terbaca
+          </h1>
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            Pastikan variabel <strong>VITE_SUPABASE_URL</strong> dan{' '}
+            <strong>VITE_SUPABASE_ANON_KEY</strong> sudah diatur sebagai <strong>Config</strong> di
+            pengaturan environment lalu lakukan <strong>Redeploy</strong> ulang.
+          </p>
+        </div>
       </div>
     );
   }

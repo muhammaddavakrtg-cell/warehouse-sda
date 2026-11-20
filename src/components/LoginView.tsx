@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { supabase } from '../lib/supabase';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 interface LoginViewProps {
   theme: 'light' | 'dark';
@@ -15,6 +15,14 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+
+    if (!supabase || !isSupabaseConfigured) {
+      setErrorMsg(
+        'Konfigurasi Supabase belum terbaca. Pastikan VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY sudah diatur sebagai Config lalu di-redeploy.'
+      );
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -54,6 +62,16 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
             {theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
           </button>
         </div>
+
+        {(!supabase || !isSupabaseConfigured) && (
+          <div
+            role="alert"
+            className="mb-4 p-3 rounded-xl text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
+          >
+            Variabel <strong>VITE_SUPABASE_URL</strong> dan <strong>VITE_SUPABASE_ANON_KEY</strong>{' '}
+            belum terbaca pada build ini.
+          </div>
+        )}
 
         {errorMsg && (
           <div
@@ -105,7 +123,7 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !supabase || !isSupabaseConfigured}
             className="w-full py-2.5 px-4 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white transition cursor-pointer"
           >
             {isSubmitting ? 'Memproses masuk...' : 'Masuk'}
