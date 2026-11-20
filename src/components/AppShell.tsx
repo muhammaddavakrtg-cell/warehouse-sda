@@ -7,11 +7,12 @@ import {
   LayoutDashboard,
   Package,
   Plus,
+  UserRound,
 } from 'lucide-react';
 import type { TransactionType } from '../types/warehouse';
 import { ThemeToggle } from './ThemeToggle';
 
-export type NavTab = 'dashboard' | 'materials' | 'logbook';
+export type NavTab = 'dashboard' | 'materials' | 'logbook' | 'profile';
 
 interface AppShellProps {
   activeTab: NavTab;
@@ -20,6 +21,7 @@ interface AppShellProps {
   onToggleTheme: () => void;
   onOpenTransaction: (defaultType: TransactionType) => void;
   criticalCount: number;
+  canEdit?: boolean;
   children: ReactNode;
 }
 
@@ -27,6 +29,7 @@ const NAV_ITEMS: { id: NavTab; label: string; mobileLabel: string; icon: typeof 
   { id: 'dashboard', label: 'Dashboard', mobileLabel: 'Beranda', icon: LayoutDashboard },
   { id: 'materials', label: 'Master Material', mobileLabel: 'Material', icon: Boxes },
   { id: 'logbook', label: 'Logbook Audit', mobileLabel: 'Logbook', icon: ClipboardList },
+  { id: 'profile', label: 'Profil Saya', mobileLabel: 'Profil', icon: UserRound },
 ];
 
 export function AppShell({
@@ -159,7 +162,7 @@ export function AppShell({
         aria-label="Navigasi Mobile"
         className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#111827]/95 backdrop-blur-md border-t border-[#CBD5E1] dark:border-[#374151] pb-safe"
       >
-        <div className="grid grid-cols-4 h-[60px] items-center px-1">
+        <div className="grid grid-cols-5 h-[60px] items-center px-1">
           <button
             type="button"
             onClick={() => onTabChange('dashboard')}
@@ -206,6 +209,19 @@ export function AppShell({
           >
             <ClipboardList className="w-5 h-5" aria-hidden="true" />
             <span className="text-[11px] mt-0.5 leading-none whitespace-nowrap">Logbook</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onTabChange('profile')}
+            className={`flex flex-col items-center justify-center min-h-[44px] rounded-xl transition-colors cursor-pointer ${
+              activeTab === 'profile'
+                ? 'text-[#1D4ED8] dark:text-[#3B82F6] font-bold'
+                : 'text-[#334155] dark:text-[#D1D5DB] font-medium'
+            }`}
+          >
+            <UserRound className="w-5 h-5" aria-hidden="true" />
+            <span className="text-[11px] mt-0.5 leading-none whitespace-nowrap">Profil</span>
           </button>
         </div>
       </nav>

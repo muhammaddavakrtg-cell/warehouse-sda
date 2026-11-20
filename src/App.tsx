@@ -6,6 +6,7 @@ import { LoginView } from './components/LoginView';
 import { LogbookView } from './components/LogbookView';
 import { MaterialFormModal } from './components/MaterialFormModal';
 import { MaterialsView } from './components/MaterialsView';
+import { ProfilePanel } from './components/ProfilePanel';
 import { ToastContainer } from './components/ToastContainer';
 import { TransactionModal } from './components/TransactionModal';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
@@ -157,7 +158,7 @@ export default function App() {
 
     supabase
       .from('profiles')
-      .select('id, username, full_name, email, role, can_edit')
+      .select('id, username, full_name, email, role, can_edit, avatar_url')
       .eq('id', session.user.id)
       .maybeSingle()
       .then(({ data }) => {
@@ -179,6 +180,7 @@ export default function App() {
           email: data?.email || fallbackEmail,
           role: roleValue,
           canEdit: canEditValue,
+          avatarUrl: data?.avatar_url || '',
         });
         setProfileLoading(false);
       })
@@ -586,6 +588,13 @@ export default function App() {
         )}
 
         {activeTab === 'logbook' && <LogbookView logs={logs} />}
+                {activeTab === 'profile' && (
+          <ProfilePanel
+            profile={profile}
+            onProfileUpdated={setProfile}
+            onNotify={pushToast}
+          />
+        )}
       </AppShell>
 
       <TransactionModal
