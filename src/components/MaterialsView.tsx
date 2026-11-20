@@ -4,6 +4,8 @@ import {
   ArrowUpRight,
   Boxes,
   Edit3,
+  FileSpreadsheet,
+  FileText,
   MapPin,
   Plus,
   Search,
@@ -15,6 +17,7 @@ import type {
   StockStatus,
   TransactionType,
 } from '../types/warehouse';
+import { exportMaterialsToExcel, exportMaterialsToPdf } from '../utils/exportMaterials';
 import { formatNumber, getStockStatus, sortMaterialsByUrgency } from '../utils/warehouse';
 import { StockStatusBadge } from './StatusBadge';
 
@@ -54,6 +57,7 @@ export function MaterialsView({
 }: MaterialsViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'ALL' | MaterialCategory>('ALL');
+  const [exporting, setExporting] = useState<'pdf' | 'excel' | null>(null);
 
   const filteredMaterials = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -73,6 +77,23 @@ export function MaterialsView({
     });
     return sortMaterialsByUrgency(list);
   }, [materials, statusFilter, categoryFilter, searchQuery]);
+
+  const handleExport = async (kind: 'pdf' | 'excel') => {
+    if (filteredMaterials.length === 0 || exporting) return;
+    setExporting(kind);
+    try {
+      if (kind === 'pdf') {
+        await exportMaterialsToPdf(filteredMaterials);
+      } else {
+        await exportMaterialsToExcel(filteredMaterials);
+      }
+    } catch (err) {
+      console.error(err);
+      window.alert('Gagal membuat file unduhan. Silakan coba lagi.');
+    } finally {
+      setExporting(null);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -158,10 +179,34 @@ export function MaterialsView({
             })}
           </div>
 
-          <p className="text-xs font-medium text-[#334155] dark:text-[#D1D5DB] tabular-nums">
-            Menampilkan <strong className="text-[#0F172A] dark:text-[#F9FAFB]">{filteredMaterials.length}</strong> dari{' '}
-            {materials.length} material
-          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-xs font-medium text-[#334155] dark:text-[#D1D5DB] tabular-nums">
+              Menampilkan <strong className="text-[#0F172A] dark:text-[#F9FAFB]">{filteredMaterials.length}</strong> dari{' '}
+              {materials.length} material
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={filteredMaterials.length === 0 || exporting !== null}
+                onClick={() => handleExport('pdf')}
+                title="Unduh daftar master material yang tampil (PDF)"
+                className="inline-flex items-center justify-center gap-1.5 min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold border border-[#CBD5E1] dark:border-[#374151] bg-white dark:bg-[#111827] hover:bg-slate-100 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap cursor-pointer"
+              >
+                <FileText className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>{exporting === 'pdf' ? 'Membuat PDF...' : 'Unduh PDF'}</span>
+              </button>
+              <button
+                type="button"
+                disabled={filteredMaterials.length === 0 || exporting !== null}
+                onClick={() => handleExport('excel')}
+                title="Unduh daftar master material yang tampil (Excel)"
+                className="inline-flex items-center justify-center gap-1.5 min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold border border-[#CBD5E1] dark:border-[#374151] bg-white dark:bg-[#111827] hover:bg-slate-100 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap cursor-pointer"
+              >
+                <FileSpreadsheet className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>{exporting === 'excel' ? 'Membuat Excel...' : 'Unduh Excel'}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

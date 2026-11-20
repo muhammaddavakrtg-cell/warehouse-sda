@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Calendar, ClipboardList, Download, Search, X } from 'lucide-react';
+import { Calendar, ClipboardList, FileSpreadsheet, FileText, Search, X } from 'lucide-react';
 import type { StockLog, TransactionType } from '../types/warehouse';
-import { exportLogsToCsv, formatDateTime, formatNumber } from '../utils/warehouse';
+import { exportKeluarToExcel, exportKeluarToPdf } from '../utils/exportLogs';
+import { formatDateTime, formatNumber } from '../utils/warehouse';
 import { TransactionBadge } from './StatusBadge';
 
 interface LogbookViewProps {
@@ -13,15 +14,15 @@ export function LogbookView({ logs }: LogbookViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [exporting, setExporting] = useState<'pdf' | 'excel' | null>(null);
 
-  const filteredLogs = useMemo(() => {
+  // Filter pencarian + tanggal (tanpa filter jenis), dipakai juga untuk unduhan material keluar
+  const dateSearchLogs = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     const fromTime = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : null;
     const toTime = dateTo ? new Date(`${dateTo}T23:59:59.999`).getTime() : null;
 
     return logs.filter((log) => {
-      if (typeFilter !== 'SEMUA' && log.type !== typeFilter) return false;
-
       const logTime = new Date(log.createdAt).getTime();
       if (fromTime !== null && logTime < fromTime) return false;
       if (toTime !== null && logTime > toTime) return false;
@@ -37,7 +38,21 @@ export function LogbookView({ logs }: LogbookViewProps) {
       }
       return true;
     });
-  }, [logs, typeFilter, searchQuery, dateFrom, dateTo]);
+  }, [logs, searchQuery, dateFrom, dateTo]);
+
+  const filteredLogs = useMemo(
+    () =>
+      typeFilter === 'SEMUA'
+        ? dateSearchLogs
+        : dateSearchLogs.filter((log) => log.type === typeFilter),
+    [dateSearchLogs, typeFilter]
+  );
+
+  // Data untuk unduhan: hanya material KELUAR, mengikuti tanggal dan pencarian
+  const keluarLogs = useMemo(
+    () => dateSearchLogs.filter((log) => log.type === 'KELUAR'),
+    [dateSearchLogs]
+  );
 
   const applyDatePreset = (preset: 'today' | '7d' | 'all') => {
     if (preset === 'all') {
@@ -54,6 +69,25 @@ export function LogbookView({ logs }: LogbookViewProps) {
       const sevenAgo = new Date(now.getTime() - 6 * 86400 * 1000);
       setDateFrom(sevenAgo.toISOString().slice(0, 10));
       setDateTo(toIso);
+    }
+  };
+
+  const handleExport = async (kind: 'pdf' | 'excel') => {
+    if (keluarLogs.length === 0 || exporting) return;
+    setExporting(kind);
+    try {
+      if (kind === 'pdf') {
+        const periode =
+          dateFrom || dateTo ? `${dateFrom || 'awal'} s/d ${dateTo || 'sekarang'}` : '';
+        await exportKeluarToPdf(keluarLogs, { periode });
+      } else {
+        await exportKeluarToExcel(keluarLogs);
+      }
+    } catch (err) {
+      console.error(err);
+      window.alert('Gagal membuat file unduhan. Silakan coba lagi.');
+    } finally {
+      setExporting(null);
     }
   };
 
@@ -116,15 +150,28 @@ export function LogbookView({ logs }: LogbookViewProps) {
             />
           </div>
 
-          <button
-            type="button"
-            disabled={filteredLogs.length === 0}
-            onClick={() => exportLogsToCsv(filteredLogs)}
-            className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 rounded-xl text-sm font-bold border border-[#CBD5E1] dark:border-[#374151] bg-white dark:bg-[#111827] hover:bg-slate-100 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-          >
-            <Download className="w-4 h-4 shrink-0" aria-hidden="true" />
-            <span>Ekspor CSV</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              disabled={keluarLogs.length === 0 || exporting !== null}
+              onClick={() => handleExport('pdf')}
+              title="Unduh daftar material keluar (PDF)"
+              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 rounded-xl text-sm font-bold border border-[#CBD5E1] dark:border-[#374151] bg-white dark:bg-[#111827] hover:bg-slate-100 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <FileText className="w-4 h-4 shrink-0" aria-hidden="true" />
+              <span>{exporting === 'pdf' ? 'Membuat PDF...' : 'PDF Material Keluar'}</span>
+            </button>
+            <button
+              type="button"
+              disabled={keluarLogs.length === 0 || exporting !== null}
+              onClick={() => handleExport('excel')}
+              title="Unduh daftar material keluar (Excel)"
+              className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 rounded-xl text-sm font-bold border border-[#CBD5E1] dark:border-[#374151] bg-white dark:bg-[#111827] hover:bg-slate-100 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <FileSpreadsheet className="w-4 h-4 shrink-0" aria-hidden="true" />
+              <span>{exporting === 'excel' ? 'Membuat Excel...' : 'Excel Material Keluar'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Type Filter + Date Presets + Summary */}
