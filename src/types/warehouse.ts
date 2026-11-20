@@ -85,6 +85,7 @@ export interface UserProfile {
   email: string;
   role: AccessLevel;
   canEdit: boolean;
+  avatarUrl?: string;
 }
 
 export function getAccessRoleLabel(role?: string): string {
