@@ -416,4 +416,199 @@ export default function App() {
           notes: payload.notes?.trim() ?? '',
         })
         .select()
-        .single
+        .single();
+
+      if (logErr) {
+        throw new Error(logErr.message || 'Gagal mencatat logbook transaksi.');
+      }
+
+      await fetchWarehouseData();
+      const log = mapLogRow(logRow);
+      pushToast(
+        'success',
+        log.type === 'MASUK' ? 'Stok Masuk Tercatat' : 'Stok Keluar Tercatat',
+        `${log.materialName}: ${log.type === 'MASUK' ? '+' : '-'}${log.quantity} ${log.materialUnit} (Stok akhir: ${log.stockAfter} ${log.materialUnit})`
+      );
+    },
+    [assertCanEdit, materials, profile, session, fetchWarehouseData, pushToast]
+  );
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-300 text-sm font-medium">
+        Memeriksa sesi login...
+      </div>
+    );
+  }
+
+  if (!isSupabaseConfigured || !supabase) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-200">
+        <div className="max-w-lg w-full rounded-2xl border border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-900 p-6 space-y-3">
+          <h1 className="text-base font-bold text-amber-700 dark:text-amber-400">
+            Konfigurasi Supabase Belum Terbaca
+          </h1>
+          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            Pastikan variabel <strong>VITE_SUPABASE_URL</strong> dan{' '}
+            <strong>VITE_SUPABASE_ANON_KEY</strong> sudah diatur sebagai <strong>Config</strong> di
+            pengaturan environment lalu lakukan <strong>Redeploy</strong> ulang.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <>
+        <LoginView theme={theme} onToggleTheme={toggleTheme} />
+        <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <AppShell
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onOpenTransaction={(type) => handleOpenTransaction(type)}
+        criticalCount={criticalCount}
+        canEdit={canEdit}
+      >
+        {/* Bar info profil, level, dan izin akses pengguna */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs">
+          <div className="flex flex-wrap items-center gap-2.5 min-w-0">
+            <div className="truncate text-slate-700 dark:text-slate-200">
+              Login sebagai:{' '}
+              <strong className="font-semibold">
+                {profileLoading
+                  ? 'Memuat profil...'
+                  : profile?.fullName || profile?.username || session.user.email}
+              </strong>{' '}
+              {!profileLoading && (
+                <span className="text-slate-500 dark:text-slate-400">
+                  (@{profile?.username || session.user.email?.split('@')[0]})
+                </span>
+              )}
+            </div>
+
+            {!profileLoading && (
+              <>
+                <span className="px-2.5 py-0.5 rounded-full font-bold text-[11px] bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                  Level: {getAccessRoleLabel(profile?.role)}
+                </span>
+
+                <span
+                  className={`px-2.5 py-0.5 rounded-full font-bold text-[11px] border ${
+                    canEdit
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                  }`}
+                >
+                  Izin: {canEdit ? 'Lihat & Edit' : 'Hanya Lihat'}
+                </span>
+              </>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="px-3 py-1.5 rounded-xl font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+          >
+            Keluar
+          </button>
+        </div>
+
+        {loadError && (
+          <div
+            role="alert"
+            className="mb-5 p-4 rounded-2xl bg-[#FEE2E2] text-[#B91C1C] border border-[#FCA5A5] dark:bg-[#7F1D1D] dark:text-[#F87171] dark:border-[#991B1B] flex items-center justify-between gap-4"
+          >
+            <span className="text-sm font-semibold">{loadError}</span>
+            <button
+              type="button"
+              onClick={fetchWarehouseData}
+              className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white/80 dark:bg-black/30 hover:bg-white cursor-pointer whitespace-nowrap"
+            >
+              Muat Ulang
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'dashboard' && (
+          <DashboardView
+            materials={materials}
+            logs={logs}
+            isLoading={isLoading}
+            canEdit={canEdit}
+            onQuickTransaction={handleOpenTransaction}
+            onNavigateMaterials={handleNavigateMaterials}
+            onNavigateLogbook={() => setActiveTab('logbook')}
+          />
+        )}
+
+        {activeTab === 'materials' && (
+          <MaterialsView
+            materials={materials}
+            statusFilter={materialsStatusFilter}
+            onStatusFilterChange={setMaterialsStatusFilter}
+            canEdit={canEdit}
+            onAddMaterial={() => {
+              if (!canEdit) {
+                pushToast(
+                  'info',
+                  'Mode Hanya Lihat',
+                  'Akun Anda tidak memiliki izin menambah material.'
+                );
+                return;
+              }
+              setEditingMaterial(null);
+              setMatModalOpen(true);
+            }}
+            onEditMaterial={(mat) => {
+              if (!canEdit) {
+                pushToast(
+                  'info',
+                  'Mode Hanya Lihat',
+                  'Akun Anda tidak memiliki izin mengedit material.'
+                );
+                return;
+              }
+              setEditingMaterial(mat);
+              setMatModalOpen(true);
+            }}
+            onQuickTransaction={handleOpenTransaction}
+          />
+        )}
+
+        {activeTab === 'logbook' && <LogbookView logs={logs} />}
+      </AppShell>
+
+      <TransactionModal
+        isOpen={txModalOpen}
+        initialType={txInitialType}
+        initialMaterialId={txInitialMaterialId}
+        materials={materials}
+        onClose={() => setTxModalOpen(false)}
+        onSubmit={handleSubmitTransaction}
+      />
+
+      <MaterialFormModal
+        isOpen={matModalOpen}
+        editingMaterial={editingMaterial}
+        onClose={() => {
+          setMatModalOpen(false);
+          setEditingMaterial(null);
+        }}
+        onCreate={handleCreateMaterial}
+        onUpdate={handleUpdateMaterial}
+      />
+
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+    </>
+  );
+}
