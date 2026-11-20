@@ -1,651 +1,528 @@
-import crypto from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import express from 'express';
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
+import type {
+  CreateMaterialInput,
+  Material,
+  StockLog,
+  StockTransactionInput,
+  UpdateMaterialInput,
+} from './src/types/warehouse.ts';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const PORT = Number(process.env.PORT || 3000);
-const DATA_DIR = path.resolve(__dirname, 'data');
-const DATA_FILE = path.join(DATA_DIR, 'warehouse.json');
-const AUTH_SECRET = process.env.AUTH_SECRET || 'gudangku-local-session-key-2026';
-
-interface StoredStaff {
-  id: string;
-  email: string;
-  full_name: string;
-  role: string;
-  password_hash: string;
+interface WarehouseDatabase {
+  materials: Material[];
+  logs: StockLog[];
 }
 
-interface StoredMaterial {
-  id: string;
-  code: string;
-  name: string;
-  category: string;
-  current_stock: number;
-  unit: string;
-  min_stock: number;
-  created_at: string;
-  updated_at: string;
-}
+const DATA_DIR = path.resolve(process.cwd(), 'data');
+const DB_FILE = path.join(DATA_DIR, 'warehouse-db.json');
 
-interface StoredTransaction {
-  id: string;
-  material_id: string;
-  material_code: string;
-  material_name: string;
-  unit: string;
-  type: 'inbound' | 'outbound';
-  quantity: number;
-  stock_before: number;
-  stock_after: number;
-  reference_no: string;
-  notes: string;
-  staff_email: string;
-  created_at: string;
-}
-
-interface WarehouseStore {
-  staff: StoredStaff[];
-  materials: StoredMaterial[];
-  transactions: StoredTransaction[];
-}
-
-function hashPassword(password: string, salt?: string): string {
-  const s = salt || crypto.randomBytes(16).toString('hex');
-  const hash = crypto.scryptSync(password, s, 64).toString('hex');
-  return `${s}:${hash}`;
-}
-
-function verifyPassword(password: string, stored: string): boolean {
-  const [salt, original] = stored.split(':');
-  if (!salt || !original) return false;
-  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
-  return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(original, 'hex'));
-}
-
-function signToken(payload: { id: string; email: string; full_name: string; role: string }): string {
-  const data = Buffer.from(JSON.stringify({ ...payload, exp: Date.now() + 1000 * 60 * 60 * 24 * 7 })).toString('base64url');
-  const sig = crypto.createHmac('sha256', AUTH_SECRET).update(data).digest('base64url');
-  return `${data}.${sig}`;
-}
-
-function verifyToken(token: string): { id: string; email: string; full_name: string; role: string } | null {
-  try {
-    const [data, sig] = token.split('.');
-    if (!data || !sig) return null;
-    const expectedSig = crypto.createHmac('sha256', AUTH_SECRET).update(data).digest('base64url');
-    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig))) return null;
-    const parsed = JSON.parse(Buffer.from(data, 'base64url').toString('utf8'));
-    if (parsed.exp < Date.now()) return null;
-    return { id: parsed.id, email: parsed.email, full_name: parsed.full_name, role: parsed.role };
-  } catch {
-    return null;
-  }
-}
-
-function createInitialSeed(): WarehouseStore {
+function buildInitialSeed(): WarehouseDatabase {
   const now = Date.now();
-  const daysAgo = (d: number, hour = 9) => {
-    const dt = new Date(now - d * 86400000);
-    dt.setHours(hour, 15, 0, 0);
-    return dt.toISOString();
-  };
+  const hoursAgo = (h: number) => new Date(now - h * 3600 * 1000).toISOString();
+  const daysAgo = (d: number) => new Date(now - d * 86400 * 1000).toISOString();
 
-  const materials: StoredMaterial[] = [
+  const materials: Material[] = [
     {
-      id: 'mat-1',
-      code: 'MAT-AL-001',
-      name: 'Plat Aluminium 6061 (2mm)',
-      category: 'Logam & Plat',
-      current_stock: 42,
-      unit: 'Lembar',
-      min_stock: 25,
-      created_at: daysAgo(20),
-      updated_at: daysAgo(0),
+      id: 'mat-01',
+      sku: 'ELK-NYM-215',
+      name: 'Kabel NYM 3x2.5mm Eterna (Roll 50m)',
+      category: 'Elektrikal',
+      unit: 'roll',
+      currentStock: 4,
+      minStock: 10,
+      location: 'Rak A1-02',
+      createdAt: daysAgo(30),
+      updatedAt: hoursAgo(2),
     },
     {
-      id: 'mat-2',
-      code: 'MAT-BS-014',
-      name: 'Besi Siku Galvanis 40x40',
-      category: 'Logam & Plat',
-      current_stock: 14,
-      unit: 'Pcs',
-      min_stock: 30,
-      created_at: daysAgo(18),
-      updated_at: daysAgo(1),
+      id: 'mat-02',
+      sku: 'MEK-BLT-M12',
+      name: 'Baut Hex Baja M12 x 50mm Galvanis',
+      category: 'Mekanikal',
+      unit: 'pcs',
+      currentStock: 0,
+      minStock: 150,
+      location: 'Rak B2-05',
+      createdAt: daysAgo(45),
+      updatedAt: hoursAgo(4),
     },
     {
-      id: 'mat-3',
-      code: 'MAT-FS-102',
-      name: 'Baut Flange M10 Stainless 304',
-      category: 'Fastener & Baut',
-      current_stock: 680,
-      unit: 'Pcs',
-      min_stock: 250,
-      created_at: daysAgo(16),
-      updated_at: daysAgo(0),
+      id: 'mat-03',
+      sku: 'PKG-STR-500',
+      name: 'Stretch Film Wrapping 50cm x 300m',
+      category: 'Packaging',
+      unit: 'roll',
+      currentStock: 42,
+      minStock: 15,
+      location: 'Rak C1-01',
+      createdAt: daysAgo(25),
+      updatedAt: hoursAgo(5),
     },
     {
-      id: 'mat-4',
-      code: 'MAT-EL-029',
-      name: 'Kabel NYYHY 3x2.5mm Supreme',
-      category: 'Kelistrikan',
-      current_stock: 4,
-      unit: 'Roll',
-      min_stock: 10,
-      created_at: daysAgo(15),
-      updated_at: daysAgo(1),
+      id: 'mat-04',
+      sku: 'APD-HLM-PRO',
+      name: 'Helm Safety Proyek Standar SNI (Putih)',
+      category: 'Safety & APD',
+      unit: 'pcs',
+      currentStock: 8,
+      minStock: 12,
+      location: 'Rak D3-04',
+      createdAt: daysAgo(60),
+      updatedAt: hoursAgo(6),
     },
     {
-      id: 'mat-5',
-      code: 'MAT-PP-008',
-      name: 'Pipa Seamless Schedule 40 (2 Inch)',
-      category: 'Pipa & Fitting',
-      current_stock: 86,
-      unit: 'Meter',
-      min_stock: 40,
-      created_at: daysAgo(14),
-      updated_at: daysAgo(2),
+      id: 'mat-05',
+      sku: 'RAW-PIP-040',
+      name: 'Pipa Besi Galvanis Schedule 40 (2 Inch)',
+      category: 'Raw Material',
+      unit: 'meter',
+      currentStock: 120,
+      minStock: 40,
+      location: 'Zona Outdoor-02',
+      createdAt: daysAgo(20),
+      updatedAt: daysAgo(1),
     },
     {
-      id: 'mat-6',
-      code: 'MAT-KM-005',
-      name: 'Karton Box Heavy Duty Double Wall',
-      category: 'Kemasan & Palet',
-      current_stock: 110,
-      unit: 'Box',
-      min_stock: 150,
-      created_at: daysAgo(12),
-      updated_at: daysAgo(0),
+      id: 'mat-06',
+      sku: 'CON-GLV-NIT',
+      name: 'Sarung Tangan Karet Nitrile Heavy Duty',
+      category: 'Consumable',
+      unit: 'box',
+      currentStock: 0,
+      minStock: 10,
+      location: 'Rak D1-08',
+      createdAt: daysAgo(40),
+      updatedAt: hoursAgo(3),
     },
     {
-      id: 'mat-7',
-      code: 'MAT-CH-019',
-      name: 'Pelumas Hidrolik ISO VG 46',
-      category: 'Bahan Kimia',
-      current_stock: 95,
-      unit: 'Liter',
-      min_stock: 60,
-      created_at: daysAgo(10),
-      updated_at: daysAgo(2),
+      id: 'mat-07',
+      sku: 'MEK-BRG-6205',
+      name: 'Bearing SKF 6205-2Z Deep Groove',
+      category: 'Mekanikal',
+      unit: 'pcs',
+      currentStock: 28,
+      minStock: 15,
+      location: 'Rak B1-01',
+      createdAt: daysAgo(18),
+      updatedAt: daysAgo(2),
     },
     {
-      id: 'mat-8',
-      code: 'MAT-EL-044',
-      name: 'MCB 3 Phase 32A Schneider',
-      category: 'Kelistrikan',
-      current_stock: 18,
-      unit: 'Pcs',
-      min_stock: 20,
-      created_at: daysAgo(9),
-      updated_at: daysAgo(0),
+      id: 'mat-08',
+      sku: 'ELK-MCB-16A',
+      name: 'MCB Schneider 1 Phase 16A C-Curve',
+      category: 'Elektrikal',
+      unit: 'pcs',
+      currentStock: 9,
+      minStock: 10,
+      location: 'Rak A2-07',
+      createdAt: daysAgo(15),
+      updatedAt: hoursAgo(7),
+    },
+    {
+      id: 'mat-09',
+      sku: 'PKG-KRD-L60',
+      name: 'Kardus Packing Double Wall 60x40x40cm',
+      category: 'Packaging',
+      unit: 'pcs',
+      currentStock: 185,
+      minStock: 50,
+      location: 'Rak C2-03',
+      createdAt: daysAgo(14),
+      updatedAt: daysAgo(1),
+    },
+    {
+      id: 'mat-10',
+      sku: 'CON-LUB-WD4',
+      name: 'Cairan Penetran Anti Karat Industrial 412ml',
+      category: 'Consumable',
+      unit: 'pcs',
+      currentStock: 34,
+      minStock: 12,
+      location: 'Rak B3-09',
+      createdAt: daysAgo(10),
+      updatedAt: daysAgo(3),
     },
   ];
 
-  const transactions: StoredTransaction[] = [
+  const logs: StockLog[] = [
     {
-      id: 'tx-1',
-      material_id: 'mat-1',
-      material_code: 'MAT-AL-001',
-      material_name: 'Plat Aluminium 6061 (2mm)',
-      unit: 'Lembar',
-      type: 'inbound',
-      quantity: 30,
-      stock_before: 24,
-      stock_after: 54,
-      reference_no: 'SJ-2026-0841',
-      notes: 'Pengiriman batch rutin vendor PT Alumindo',
-      staff_email: 'staf@gudangku.id',
-      created_at: daysAgo(11, 10),
+      id: 'log-01',
+      materialId: 'mat-01',
+      materialSku: 'ELK-NYM-215',
+      materialName: 'Kabel NYM 3x2.5mm Eterna (Roll 50m)',
+      materialUnit: 'roll',
+      type: 'KELUAR',
+      quantity: 6,
+      stockBefore: 10,
+      stockAfter: 4,
+      party: 'Proyek Panel Gudang Timur',
+      pic: 'Budi Santoso',
+      notes: 'Penarikan kabel instalasi jalur lampu sektor B',
+      createdAt: hoursAgo(2),
     },
     {
-      id: 'tx-2',
-      material_id: 'mat-1',
-      material_code: 'MAT-AL-001',
-      material_name: 'Plat Aluminium 6061 (2mm)',
-      unit: 'Lembar',
-      type: 'outbound',
-      quantity: 12,
-      stock_before: 54,
-      stock_after: 42,
-      reference_no: 'WO-PROD-412',
-      notes: 'Pengambilan lini fabrikasi panel',
-      staff_email: 'staf@gudangku.id',
-      created_at: daysAgo(8, 14),
+      id: 'log-02',
+      materialId: 'mat-06',
+      materialSku: 'CON-GLV-NIT',
+      materialName: 'Sarung Tangan Karet Nitrile Heavy Duty',
+      materialUnit: 'box',
+      type: 'KELUAR',
+      quantity: 5,
+      stockBefore: 5,
+      stockAfter: 0,
+      party: 'Tim Maintenance Shift Pagi',
+      pic: 'Rina Wijaya',
+      notes: 'Pengambilan stok terakhir untuk tim mekanik',
+      createdAt: hoursAgo(3),
     },
     {
-      id: 'tx-3',
-      material_id: 'mat-3',
-      material_code: 'MAT-FS-102',
-      material_name: 'Baut Flange M10 Stainless 304',
-      unit: 'Pcs',
-      type: 'inbound',
-      quantity: 500,
-      stock_before: 330,
-      stock_after: 830,
-      reference_no: 'PO-2026-192',
-      notes: 'Restock fastener rak B-04',
-      staff_email: 'staf@gudangku.id',
-      created_at: daysAgo(6, 9),
+      id: 'log-03',
+      materialId: 'mat-02',
+      materialSku: 'MEK-BLT-M12',
+      materialName: 'Baut Hex Baja M12 x 50mm Galvanis',
+      materialUnit: 'pcs',
+      type: 'KELUAR',
+      quantity: 80,
+      stockBefore: 80,
+      stockAfter: 0,
+      party: 'Line Assembly Conveyor #3',
+      pic: 'Dimas Pratama',
+      notes: 'Perakitan rangka bracket jalur konveyor baru',
+      createdAt: hoursAgo(4),
     },
     {
-      id: 'tx-4',
-      material_id: 'mat-2',
-      material_code: 'MAT-BS-014',
-      material_name: 'Besi Siku Galvanis 40x40',
-      unit: 'Pcs',
-      type: 'outbound',
-      quantity: 26,
-      stock_before: 40,
-      stock_after: 14,
-      reference_no: 'WO-PROJ-109',
-      notes: 'Proyek rangka konveyor zona C',
-      staff_email: 'staf@gudangku.id',
-      created_at: daysAgo(5, 11),
+      id: 'log-04',
+      materialId: 'mat-03',
+      materialSku: 'PKG-STR-500',
+      materialName: 'Stretch Film Wrapping 50cm x 300m',
+      materialUnit: 'roll',
+      type: 'MASUK',
+      quantity: 20,
+      stockBefore: 22,
+      stockAfter: 42,
+      party: 'PT Kemas Jaya Abadi',
+      pic: 'Budi Santoso',
+      notes: 'PO #2026-1148 diterima sesuai surat jalan',
+      createdAt: hoursAgo(5),
     },
     {
-      id: 'tx-5',
-      material_id: 'mat-5',
-      material_code: 'MAT-PP-008',
-      material_name: 'Pipa Seamless Schedule 40 (2 Inch)',
-      unit: 'Meter',
-      type: 'inbound',
+      id: 'log-05',
+      materialId: 'mat-04',
+      materialSku: 'APD-HLM-PRO',
+      materialName: 'Helm Safety Proyek Standar SNI (Putih)',
+      materialUnit: 'pcs',
+      type: 'KELUAR',
+      quantity: 4,
+      stockBefore: 12,
+      stockAfter: 8,
+      party: 'Tim Inspeksi Lapangan',
+      pic: 'Rina Wijaya',
+      notes: 'Perlengkapan teknisi kontraktor baru',
+      createdAt: hoursAgo(6),
+    },
+    {
+      id: 'log-06',
+      materialId: 'mat-08',
+      materialSku: 'ELK-MCB-16A',
+      materialName: 'MCB Schneider 1 Phase 16A C-Curve',
+      materialUnit: 'pcs',
+      type: 'KELUAR',
+      quantity: 5,
+      stockBefore: 14,
+      stockAfter: 9,
+      party: 'Perbaikan Panel Sektor Barat',
+      pic: 'Dimas Pratama',
+      notes: 'Penggantian MCB panel distribusi utama',
+      createdAt: hoursAgo(7),
+    },
+    {
+      id: 'log-07',
+      materialId: 'mat-05',
+      materialSku: 'RAW-PIP-040',
+      materialName: 'Pipa Besi Galvanis Schedule 40 (2 Inch)',
+      materialUnit: 'meter',
+      type: 'MASUK',
       quantity: 60,
-      stock_before: 46,
-      stock_after: 106,
-      reference_no: 'SJ-2026-0879',
-      notes: 'Kedatangan kontainer pipa batch 2',
-      staff_email: 'staf@gudangku.id',
-      created_at: daysAgo(4, 15),
+      stockBefore: 60,
+      stockAfter: 120,
+      party: 'CV Baja Makmur Sentosa',
+      pic: 'Budi Santoso',
+      notes: 'Restock mingguan batch ke-2, kualitas dicek OK',
+      createdAt: daysAgo(1),
     },
     {
-      id: 'tx-6',
-      material_id: 'mat-4',
-      material_code: 'MAT-EL-029',
-      material_name: 'Kabel NYYHY 3x2.5mm Supreme',
-      unit: 'Roll',
-      type: 'outbound',
-      quantity: 8,
-      stock_before: 12,
-      stock_after: 4,
-      reference_no: 'WO-MNT-088',
-      notes: 'Instalasi panel distribusi gudang timur',
-      staff_email: 'staf@gudangku.id',
-      created_at: daysAgo(3, 13),
-    },
-    {
-      id: 'tx-7',
-      material_id: 'mat-3',
-      material_code: 'MAT-FS-102',
-      material_name: 'Baut Flange M10 Stainless 304',
-      unit: 'Pcs',
-      type: 'outbound',
-      quantity: 150,
-      stock_before: 830,
-      stock_after: 680,
-      reference_no: 'WO-ASM-221',
-      notes: 'Perakitan modul rangka batch #14',
-      staff_email: 'staf@gudangku.id',
-      created_at: daysAgo(2, 10),
-    },
-    {
-      id: 'tx-8',
-      material_id: 'mat-6',
-      material_code: 'MAT-KM-005',
-      material_name: 'Karton Box Heavy Duty Double Wall',
-      unit: 'Box',
-      type: 'outbound',
-      quantity: 90,
-      stock_before: 200,
-      stock_after: 110,
-      reference_no: 'DO-EXP-774',
-      notes: 'Pengemasan pengiriman ekspor Surabaya',
-      staff_email: 'staf@gudangku.id',
-      created_at: daysAgo(1, 16),
-    },
-    {
-      id: 'tx-9',
-      material_id: 'mat-7',
-      material_code: 'MAT-CH-019',
-      material_name: 'Pelumas Hidrolik ISO VG 46',
-      unit: 'Liter',
-      type: 'inbound',
-      quantity: 40,
-      stock_before: 55,
-      stock_after: 95,
-      reference_no: 'SJ-2026-0912',
-      notes: 'Pengisian drum penyimpanan bahan kimia',
-      staff_email: 'staf@gudangku.id',
-      created_at: daysAgo(0, 8),
+      id: 'log-08',
+      materialId: 'mat-09',
+      materialSku: 'PKG-KRD-L60',
+      materialName: 'Kardus Packing Double Wall 60x40x40cm',
+      materialUnit: 'pcs',
+      type: 'MASUK',
+      quantity: 100,
+      stockBefore: 85,
+      stockAfter: 185,
+      party: 'PT Karton Nusantara',
+      pic: 'Rina Wijaya',
+      notes: 'Restock kemasan pengiriman reguler',
+      createdAt: daysAgo(1),
     },
   ];
 
-  return {
-    staff: [
-      {
-        id: 'staff-1',
-        email: 'staf@gudangku.id',
-        full_name: 'Supriadi Pratama',
-        role: 'Kepala Shift Gudang',
-        password_hash: hashPassword('Gudang2026!'),
-      },
-    ],
-    materials,
-    transactions,
-  };
+  return { materials, logs };
 }
 
-function loadStore(): WarehouseStore {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(DATA_FILE)) {
-    const seed = createInitialSeed();
-    fs.writeFileSync(DATA_FILE, JSON.stringify(seed, null, 2), 'utf8');
+function ensureDb(): WarehouseDatabase {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+  if (!fs.existsSync(DB_FILE)) {
+    const seed = buildInitialSeed();
+    fs.writeFileSync(DB_FILE, JSON.stringify(seed, null, 2), 'utf-8');
     return seed;
   }
-  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')) as WarehouseStore;
-}
-
-function saveStore(store: WarehouseStore): void {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(DATA_FILE, JSON.stringify(store, null, 2), 'utf8');
-}
-
-let store = loadStore();
-
-// SSE clients for real-time updates
-const sseClients = new Set<express.Response>();
-function broadcastRealtimeEvent(eventType: string, payload: unknown) {
-  const data = `event: ${eventType}\ndata: ${JSON.stringify(payload)}\n\n`;
-  for (const res of sseClients) {
-    res.write(data);
+  try {
+    const raw = fs.readFileSync(DB_FILE, 'utf-8');
+    return JSON.parse(raw) as WarehouseDatabase;
+  } catch {
+    const seed = buildInitialSeed();
+    fs.writeFileSync(DB_FILE, JSON.stringify(seed, null, 2), 'utf-8');
+    return seed;
   }
 }
 
-function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  const user = verifyToken(token);
-  if (!user) {
-    res.status(401).json({ error: 'Sesi tidak valid. Silakan masuk kembali.' });
-    return;
+function saveDb(db: WarehouseDatabase): void {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
   }
-  (req as express.Request & { staffUser: typeof user }).staffUser = user;
-  next();
+  const tempFile = `${DB_FILE}.tmp`;
+  fs.writeFileSync(tempFile, JSON.stringify(db, null, 2), 'utf-8');
+  fs.renameSync(tempFile, DB_FILE);
+}
+
+// In-process mutex queue to guarantee atomic read-modify-write for stock movements
+let writeQueue: Promise<unknown> = Promise.resolve();
+function runAtomic<T>(fn: (db: WarehouseDatabase) => T): Promise<T> {
+  const next = writeQueue.then(() => {
+    const db = ensureDb();
+    const result = fn(db);
+    saveDb(db);
+    return result;
+  });
+  writeQueue = next.catch(() => undefined);
+  return next;
 }
 
 async function startServer() {
   const app = express();
+  const PORT = 3000;
+
   app.use(express.json());
 
-  // Health check
-  app.get('/api/health', (_req, res) => {
-    res.json({ ok: true });
+  // GET /api/materials
+  app.get('/api/materials', (_req, res) => {
+    const db = ensureDb();
+    res.json({ materials: db.materials });
   });
 
-  // SSE Realtime Stream
-  app.get('/api/events', (req, res) => {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
-    res.write(`event: connected\ndata: ${JSON.stringify({ ts: Date.now() })}\n\n`);
+  // POST /api/materials
+  app.post('/api/materials', async (req, res) => {
+    try {
+      const payload = req.body as CreateMaterialInput;
+      const sku = String(payload.sku || '').trim().toUpperCase();
+      const name = String(payload.name || '').trim();
+      const location = String(payload.location || '').trim();
+      const currentStock = Number(payload.currentStock);
+      const minStock = Number(payload.minStock);
 
-    sseClients.add(res);
-    const heartbeat = setInterval(() => {
-      res.write(': ping\n\n');
-    }, 25000);
+      if (!sku || !name || !location) {
+        return res.status(400).json({ error: 'SKU, Nama Material, dan Lokasi Rak wajib diisi.' });
+      }
+      if (!Number.isFinite(currentStock) || currentStock < 0) {
+        return res.status(400).json({ error: 'Stok awal tidak boleh kurang dari 0.' });
+      }
+      if (!Number.isFinite(minStock) || minStock < 0) {
+        return res.status(400).json({ error: 'Batas minimum stok tidak boleh kurang dari 0.' });
+      }
 
-    req.on('close', () => {
-      clearInterval(heartbeat);
-      sseClients.delete(res);
-    });
-  });
+      const created = await runAtomic((db) => {
+        const duplicate = db.materials.find((m) => m.sku.toUpperCase() === sku);
+        if (duplicate) {
+          throw new Error(`SKU "${sku}" sudah terdaftar pada material "${duplicate.name}".`);
+        }
+        const nowIso = new Date().toISOString();
+        const material: Material = {
+          id: `mat-${crypto.randomUUID().slice(0, 8)}`,
+          sku,
+          name,
+          category: payload.category,
+          unit: payload.unit,
+          currentStock,
+          minStock,
+          location,
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        };
+        db.materials.unshift(material);
 
-  // Auth routes
-  app.post('/api/auth/login', (req, res) => {
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    const password = String(req.body?.password || '');
-
-    if (!email || !password) {
-      res.status(400).json({ error: 'Email dan kata sandi wajib diisi.' });
-      return;
-    }
-
-    const staff = store.staff.find((s) => s.email.toLowerCase() === email);
-    if (!staff || !verifyPassword(password, staff.password_hash)) {
-      res.status(401).json({ error: 'Email atau kata sandi staf salah.' });
-      return;
-    }
-
-    const user = { id: staff.id, email: staff.email, full_name: staff.full_name, role: staff.role };
-    const token = signToken(user);
-    res.json({ user, token });
-  });
-
-  app.post('/api/auth/register', (req, res) => {
-    const email = String(req.body?.email || '').trim().toLowerCase();
-    const password = String(req.body?.password || '');
-    const full_name = String(req.body?.full_name || '').trim() || email.split('@')[0];
-
-    if (!email || password.length < 6) {
-      res.status(400).json({ error: 'Gunakan email valid dan kata sandi minimal 6 karakter.' });
-      return;
-    }
-
-    if (store.staff.some((s) => s.email.toLowerCase() === email)) {
-      res.status(409).json({ error: 'Email staf sudah terdaftar.' });
-      return;
-    }
-
-    const newStaff: StoredStaff = {
-      id: `staff-${crypto.randomUUID().slice(0, 8)}`,
-      email,
-      full_name,
-      role: 'Staf Operasional Gudang',
-      password_hash: hashPassword(password),
-    };
-    store.staff.push(newStaff);
-    saveStore(store);
-
-    const user = { id: newStaff.id, email: newStaff.email, full_name: newStaff.full_name, role: newStaff.role };
-    const token = signToken(user);
-    res.status(201).json({ user, token });
-  });
-
-  app.get('/api/auth/session', (req, res) => {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : '';
-    const user = verifyToken(token);
-    if (!user) {
-      res.status(401).json({ user: null });
-      return;
-    }
-    res.json({ user });
-  });
-
-  // Materials CRUD
-  app.get('/api/materials', requireAuth, (_req, res) => {
-    const sorted = [...store.materials].sort((a, b) => a.code.localeCompare(b.code));
-    res.json(sorted);
-  });
-
-  app.post('/api/materials', requireAuth, (req, res) => {
-    const code = String(req.body?.code || '').trim().toUpperCase();
-    const name = String(req.body?.name || '').trim();
-    const category = String(req.body?.category || '').trim();
-    const unit = String(req.body?.unit || '').trim();
-    const current_stock = Number(req.body?.current_stock ?? 0);
-    const min_stock = Number(req.body?.min_stock ?? 0);
-
-    if (!code || !name || !category || !unit) {
-      res.status(400).json({ error: 'Kode barang, nama, kategori, dan satuan wajib diisi.' });
-      return;
-    }
-    if (Number.isNaN(current_stock) || current_stock < 0 || Number.isNaN(min_stock) || min_stock < 0) {
-      res.status(400).json({ error: 'Stok saat ini dan batas minimum tidak boleh bernilai negatif.' });
-      return;
-    }
-    if (store.materials.some((m) => m.code.toUpperCase() === code)) {
-      res.status(409).json({ error: `Kode barang ${code} sudah terdaftar.` });
-      return;
-    }
-
-    const now = new Date().toISOString();
-    const created: StoredMaterial = {
-      id: `mat-${crypto.randomUUID().slice(0, 8)}`,
-      code,
-      name,
-      category,
-      current_stock: Math.floor(current_stock),
-      unit,
-      min_stock: Math.floor(min_stock),
-      created_at: now,
-      updated_at: now,
-    };
-
-    store.materials.push(created);
-    saveStore(store);
-    broadcastRealtimeEvent('warehouse_update', { entity: 'materials', action: 'insert', material: created });
-    res.status(201).json(created);
-  });
-
-  app.put('/api/materials/:id', requireAuth, (req, res) => {
-    const { id } = req.params;
-    const index = store.materials.findIndex((m) => m.id === id);
-    if (index === -1) {
-      res.status(404).json({ error: 'Material tidak ditemukan.' });
-      return;
-    }
-
-    const code = String(req.body?.code || '').trim().toUpperCase();
-    const name = String(req.body?.name || '').trim();
-    const category = String(req.body?.category || '').trim();
-    const unit = String(req.body?.unit || '').trim();
-    const current_stock = Number(req.body?.current_stock ?? store.materials[index].current_stock);
-    const min_stock = Number(req.body?.min_stock ?? store.materials[index].min_stock);
-
-    if (!code || !name || !category || !unit) {
-      res.status(400).json({ error: 'Kode barang, nama, kategori, dan satuan wajib diisi.' });
-      return;
-    }
-    if (Number.isNaN(current_stock) || current_stock < 0 || Number.isNaN(min_stock) || min_stock < 0) {
-      res.status(400).json({ error: 'Stok dan batas minimum harus 0 atau lebih.' });
-      return;
-    }
-    if (store.materials.some((m) => m.id !== id && m.code.toUpperCase() === code)) {
-      res.status(409).json({ error: `Kode barang ${code} sudah digunakan material lain.` });
-      return;
-    }
-
-    const updated: StoredMaterial = {
-      ...store.materials[index],
-      code,
-      name,
-      category,
-      current_stock: Math.floor(current_stock),
-      unit,
-      min_stock: Math.floor(min_stock),
-      updated_at: new Date().toISOString(),
-    };
-    store.materials[index] = updated;
-    saveStore(store);
-    broadcastRealtimeEvent('warehouse_update', { entity: 'materials', action: 'update', material: updated });
-    res.json(updated);
-  });
-
-  app.delete('/api/materials/:id', requireAuth, (req, res) => {
-    const { id } = req.params;
-    const index = store.materials.findIndex((m) => m.id === id);
-    if (index === -1) {
-      res.status(404).json({ error: 'Material tidak ditemukan.' });
-      return;
-    }
-    const [removed] = store.materials.splice(index, 1);
-    store.transactions = store.transactions.filter((t) => t.material_id !== id);
-    saveStore(store);
-    broadcastRealtimeEvent('warehouse_update', { entity: 'materials', action: 'delete', id: removed.id });
-    res.json({ deleted: true, id: removed.id });
-  });
-
-  // Transactions (Inbound & Outbound)
-  app.get('/api/transactions', requireAuth, (_req, res) => {
-    const sorted = [...store.transactions].sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
-    res.json(sorted);
-  });
-
-  app.post('/api/transactions', requireAuth, (req, res) => {
-    const staffUser = (req as express.Request & { staffUser: { email: string } }).staffUser;
-    const material_id = String(req.body?.material_id || '');
-    const type = req.body?.type as 'inbound' | 'outbound';
-    const quantity = Math.floor(Number(req.body?.quantity || 0));
-    const reference_no = String(req.body?.reference_no || '').trim();
-    const notes = String(req.body?.notes || '').trim();
-
-    if (!material_id || (type !== 'inbound' && type !== 'outbound') || quantity <= 0) {
-      res.status(400).json({ error: 'Material, tipe transaksi, dan jumlah (> 0) wajib valid.' });
-      return;
-    }
-
-    const matIndex = store.materials.findIndex((m) => m.id === material_id);
-    if (matIndex === -1) {
-      res.status(404).json({ error: 'Material tidak ditemukan.' });
-      return;
-    }
-
-    const material = store.materials[matIndex];
-    if (type === 'outbound' && material.current_stock < quantity) {
-      res.status(400).json({
-        error: `Stok tidak mencukupi. Tersedia ${material.current_stock} ${material.unit}, diminta ${quantity} ${material.unit}.`,
+        if (currentStock > 0) {
+          db.logs.unshift({
+            id: `log-${crypto.randomUUID().slice(0, 8)}`,
+            materialId: material.id,
+            materialSku: material.sku,
+            materialName: material.name,
+            materialUnit: material.unit,
+            type: 'MASUK',
+            quantity: currentStock,
+            stockBefore: 0,
+            stockAfter: currentStock,
+            party: 'Saldo Awal Master Material',
+            pic: 'Admin Gudang',
+            notes: 'Registrasi material baru ke sistem inventaris',
+            createdAt: nowIso,
+          });
+        }
+        return material;
       });
-      return;
+
+      res.status(201).json({ material: created });
+    } catch (err: any) {
+      res.status(400).json({ error: err?.message || 'Gagal menambahkan material.' });
     }
-
-    const stock_before = material.current_stock;
-    const stock_after = type === 'inbound' ? stock_before + quantity : stock_before - quantity;
-    const now = new Date().toISOString();
-
-    store.materials[matIndex] = {
-      ...material,
-      current_stock: stock_after,
-      updated_at: now,
-    };
-
-    const tx: StoredTransaction = {
-      id: `tx-${crypto.randomUUID().slice(0, 8)}`,
-      material_id: material.id,
-      material_code: material.code,
-      material_name: material.name,
-      unit: material.unit,
-      type,
-      quantity,
-      stock_before,
-      stock_after,
-      reference_no: reference_no || (type === 'inbound' ? `SJ-${Date.now().toString().slice(-6)}` : `WO-${Date.now().toString().slice(-6)}`),
-      notes,
-      staff_email: staffUser.email,
-      created_at: now,
-    };
-
-    store.transactions.unshift(tx);
-    saveStore(store);
-
-    broadcastRealtimeEvent('warehouse_update', {
-      entity: 'transactions',
-      action: 'insert',
-      transaction: tx,
-      material: store.materials[matIndex],
-    });
-
-    res.status(201).json({ transaction: tx, material: store.materials[matIndex] });
   });
 
+  // PATCH /api/materials/:id
+  app.patch('/api/materials/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const payload = req.body as UpdateMaterialInput;
+      const sku = String(payload.sku || '').trim().toUpperCase();
+      const name = String(payload.name || '').trim();
+      const location = String(payload.location || '').trim();
+      const minStock = Number(payload.minStock);
+
+      if (!sku || !name || !location) {
+        return res.status(400).json({ error: 'SKU, Nama Material, dan Lokasi Rak wajib diisi.' });
+      }
+      if (!Number.isFinite(minStock) || minStock < 0) {
+        return res.status(400).json({ error: 'Batas minimum stok tidak boleh negatif.' });
+      }
+
+      const updated = await runAtomic((db) => {
+        const index = db.materials.findIndex((m) => m.id === id);
+        if (index === -1) {
+          throw new Error('Material tidak ditemukan.');
+        }
+        const duplicate = db.materials.find((m) => m.id !== id && m.sku.toUpperCase() === sku);
+        if (duplicate) {
+          throw new Error(`SKU "${sku}" sudah digunakan oleh material lain.`);
+        }
+        const existing = db.materials[index];
+        const next: Material = {
+          ...existing,
+          sku,
+          name,
+          category: payload.category,
+          unit: payload.unit,
+          minStock,
+          location,
+          updatedAt: new Date().toISOString(),
+        };
+        db.materials[index] = next;
+        return next;
+      });
+
+      res.json({ material: updated });
+    } catch (err: any) {
+      res.status(400).json({ error: err?.message || 'Gagal memperbarui material.' });
+    }
+  });
+
+  // POST /api/transactions — Atomic stock in/out matching PostgreSQL RPC record_stock_movement
+  app.post('/api/transactions', async (req, res) => {
+    try {
+      const payload = req.body as StockTransactionInput;
+      const quantity = Number(payload.quantity);
+      const party = String(payload.party || '').trim();
+      const pic = String(payload.pic || '').trim() || 'Staf Gudang';
+      const notes = String(payload.notes || '').trim();
+
+      if (!payload.materialId) {
+        return res.status(400).json({ error: 'Material harus dipilih.' });
+      }
+      if (payload.type !== 'MASUK' && payload.type !== 'KELUAR') {
+        return res.status(400).json({ error: 'Jenis transaksi harus MASUK atau KELUAR.' });
+      }
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        return res.status(400).json({ error: 'Jumlah transaksi harus lebih dari 0.' });
+      }
+      if (!party) {
+        return res.status(400).json({
+          error:
+            payload.type === 'MASUK'
+              ? 'Sumber / Supplier wajib diisi.'
+              : 'Pemohon / Proyek wajib diisi.',
+        });
+      }
+
+      const result = await runAtomic((db) => {
+        const index = db.materials.findIndex((m) => m.id === payload.materialId);
+        if (index === -1) {
+          throw new Error('Material tidak ditemukan.');
+        }
+        const material = db.materials[index];
+        const stockBefore = material.currentStock;
+        const stockAfter =
+          payload.type === 'MASUK' ? stockBefore + quantity : stockBefore - quantity;
+
+        if (stockAfter < 0) {
+          throw new Error(
+            `Stok tidak mencukupi! Stok tersedia ${stockBefore} ${material.unit}, diminta ${quantity} ${material.unit}.`
+          );
+        }
+
+        const nowIso = new Date().toISOString();
+        const updatedMaterial: Material = {
+          ...material,
+          currentStock: stockAfter,
+          updatedAt: nowIso,
+        };
+        db.materials[index] = updatedMaterial;
+
+        const logEntry: StockLog = {
+          id: `log-${crypto.randomUUID().slice(0, 8)}`,
+          materialId: material.id,
+          materialSku: material.sku,
+          materialName: material.name,
+          materialUnit: material.unit,
+          type: payload.type,
+          quantity,
+          stockBefore,
+          stockAfter,
+          party,
+          pic,
+          notes,
+          createdAt: nowIso,
+        };
+        db.logs.unshift(logEntry);
+
+        return { material: updatedMaterial, log: logEntry };
+      });
+
+      res.status(201).json(result);
+    } catch (err: any) {
+      res.status(400).json({ error: err?.message || 'Gagal mencatat transaksi stok.' });
+    }
+  });
+
+  // GET /api/logs
+  app.get('/api/logs', (_req, res) => {
+    const db = ensureDb();
+    res.json({ logs: db.logs });
+  });
+
+  // Vite integration in development / static serving in production
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -653,7 +530,7 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.resolve(__dirname, 'dist');
+    const distPath = path.resolve(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
@@ -661,7 +538,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`GudangKu WMS server running on http://0.0.0.0:${PORT}`);
+    console.log(`GudangPro server running on http://0.0.0.0:${PORT}`);
   });
 }
 

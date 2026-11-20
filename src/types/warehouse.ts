@@ -1,73 +1,77 @@
-export type TransactionType = 'inbound' | 'outbound';
+export type TransactionType = 'MASUK' | 'KELUAR';
+
+export type StockStatus = 'AMAN' | 'MENIPIS' | 'HABIS';
+
+export type MaterialUnit = 'pcs' | 'kg' | 'roll' | 'box' | 'meter' | 'liter' | 'unit';
+
+export type MaterialCategory =
+  | 'Elektrikal'
+  | 'Mekanikal'
+  | 'Packaging'
+  | 'Safety & APD'
+  | 'Raw Material'
+  | 'Consumable';
 
 export interface Material {
   id: string;
-  code: string;
+  sku: string;
   name: string;
-  category: string;
-  current_stock: number;
-  unit: string;
-  min_stock: number;
-  created_at: string;
-  updated_at: string;
+  category: MaterialCategory;
+  unit: MaterialUnit;
+  currentStock: number;
+  minStock: number;
+  location: string;
+  updatedAt: string;
+  createdAt: string;
 }
 
-export interface MaterialInput {
-  code: string;
-  name: string;
-  category: string;
-  current_stock: number;
-  unit: string;
-  min_stock: number;
-}
-
-export interface MaterialTransaction {
+export interface StockLog {
   id: string;
-  material_id: string;
-  material_code: string;
-  material_name: string;
-  unit: string;
+  materialId: string;
+  materialSku: string;
+  materialName: string;
+  materialUnit: MaterialUnit;
   type: TransactionType;
   quantity: number;
-  stock_before: number;
-  stock_after: number;
-  reference_no: string;
+  stockBefore: number;
+  stockAfter: number;
+  party: string; // Supplier (MASUK) atau Pemohon/Proyek (KELUAR)
+  pic: string; // Penanggung jawab
   notes: string;
-  staff_email: string;
-  created_at: string;
+  createdAt: string;
 }
 
-export interface TransactionInput {
-  material_id: string;
+export interface CreateMaterialInput {
+  sku: string;
+  name: string;
+  category: MaterialCategory;
+  unit: MaterialUnit;
+  currentStock: number;
+  minStock: number;
+  location: string;
+}
+
+export interface UpdateMaterialInput {
+  sku: string;
+  name: string;
+  category: MaterialCategory;
+  unit: MaterialUnit;
+  minStock: number;
+  location: string;
+}
+
+export interface StockTransactionInput {
+  materialId: string;
   type: TransactionType;
   quantity: number;
-  reference_no: string;
+  party: string;
+  pic: string;
   notes: string;
 }
 
-export interface StaffUser {
+export interface ToastMessage {
   id: string;
-  email: string;
-  full_name: string;
-  role: string;
+  variant: 'success' | 'error' | 'info';
+  title: string;
+  description?: string;
 }
-
-export const MATERIAL_CATEGORIES = [
-  'Logam & Plat',
-  'Fastener & Baut',
-  'Kelistrikan',
-  'Pipa & Fitting',
-  'Kemasan & Palet',
-  'Bahan Kimia',
-] as const;
-
-export const MATERIAL_UNITS = [
-  'Pcs',
-  'Lembar',
-  'Kg',
-  'Meter',
-  'Roll',
-  'Liter',
-  'Box',
-  'Set',
-] as const;

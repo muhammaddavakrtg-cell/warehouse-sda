@@ -1,6 +1,6 @@
 {
-  "name": "GudangKu WMS",
-  "description": "Sistem manajemen material gudang real-time dengan autentikasi staf, master data material, transaksi inbound/outbound, dan dukungan PWA.",
+  "name": "GudangPro — Manajemen Material Gudang",
+  "description": "Aplikasi web manajemen inventaris material gudang dengan antarmuka high-contrast Light/Dark Mode, transaksi stok masuk/keluar atomik, dan audit logbook kronologis.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }

@@ -1,263 +1,337 @@
-import React, { useMemo } from 'react';
 import {
+  Activity,
   AlertTriangle,
   ArrowDownLeft,
   ArrowRight,
   ArrowUpRight,
+  Boxes,
   CheckCircle2,
+  MapPin,
   PackageCheck,
+  XOctagon,
 } from 'lucide-react';
-import type { Material, MaterialTransaction } from '../types/warehouse';
-import { TransactionChart } from './TransactionChart';
+import type { Material, StockLog, StockStatus, TransactionType } from '../types/warehouse';
+import {
+  formatNumber,
+  formatShortTime,
+  getStockStatus,
+  isToday,
+  sortMaterialsByUrgency,
+} from '../utils/warehouse';
+import { StockStatusBadge, TransactionBadge } from './StatusBadge';
 
 interface DashboardViewProps {
   materials: Material[];
-  transactions: MaterialTransaction[];
-  onQuickRestock: (materialId: string) => void;
-  onNavigate: (tab: 'dashboard' | 'materials' | 'transactions') => void;
+  logs: StockLog[];
+  isLoading: boolean;
+  onQuickTransaction: (type: TransactionType, materialId?: string) => void;
+  onNavigateMaterials: (statusFilter?: StockStatus | 'ALL') => void;
+  onNavigateLogbook: () => void;
 }
 
-export const DashboardView: React.FC<DashboardViewProps> = ({
+export function DashboardView({
   materials,
-  transactions,
-  onQuickRestock,
-  onNavigate,
-}) => {
-  const stats = useMemo(() => {
-    const totalTypes = materials.length;
-    const totalStock = materials.reduce((sum, m) => sum + m.current_stock, 0);
-    const categoriesCount = new Set(materials.map((m) => m.category)).size;
-    const lowStockItems = materials
-      .filter((m) => m.current_stock < m.min_stock)
-      .sort((a, b) => a.current_stock - a.min_stock - (b.current_stock - b.min_stock));
+  logs,
+  isLoading,
+  onQuickTransaction,
+  onNavigateMaterials,
+  onNavigateLogbook,
+}: DashboardViewProps) {
+  const totalMaterials = materials.length;
+  const lowStockItems = materials.filter(
+    (m) => getStockStatus(m.currentStock, m.minStock) === 'MENIPIS'
+  );
+  const outOfStockItems = materials.filter(
+    (m) => getStockStatus(m.currentStock, m.minStock) === 'HABIS'
+  );
+  const todayLogs = logs.filter((l) => isToday(l.createdAt));
 
-    const todayStr = new Date().toDateString();
-    const todayTx = transactions.filter((t) => new Date(t.created_at).toDateString() === todayStr);
-    const todayInbound = todayTx.filter((t) => t.type === 'inbound').length;
-    const todayOutbound = todayTx.filter((t) => t.type === 'outbound').length;
+  const criticalItems = sortMaterialsByUrgency(
+    materials.filter((m) => getStockStatus(m.currentStock, m.minStock) !== 'AMAN')
+  );
 
-    return {
-      totalTypes,
-      totalStock,
-      categoriesCount,
-      lowStockItems,
-      todayCount: todayTx.length,
-      todayInbound,
-      todayOutbound,
-    };
-  }, [materials, transactions]);
+  const recentLogs = logs.slice(0, 6);
 
-  const recentTransactions = transactions.slice(0, 6);
+  if (isLoading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-28 rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151]"
+            />
+          ))}
+        </div>
+        <div className="h-72 rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151]" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* 4-Column KPI Summary Strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <p className="text-xs font-medium text-slate-500">Total Jenis Material</p>
-          <p className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 font-mono tabular-nums">
-            {stats.totalTypes.toLocaleString('id-ID')}
-          </p>
-          <p className="mt-1.5 text-xs text-slate-500 tabular-nums">
-            Tersebar di {stats.categoriesCount} kategori aktif
-          </p>
-        </div>
+      {/* Mobile Quick Actions (Thumb-Zone Priority) */}
+      <section className="grid grid-cols-2 gap-3 lg:hidden" aria-label="Aksi Cepat Transaksi">
+        <button
+          type="button"
+          onClick={() => onQuickTransaction('MASUK')}
+          className="flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-xl font-bold text-sm border border-[#86EFAC] bg-[#DCFCE7] text-[#15803D] dark:border-[#166534] dark:bg-[#14532D] dark:text-[#4ADE80] active:scale-[0.98] transition-transform cursor-pointer"
+        >
+          <ArrowDownLeft className="w-5 h-5 shrink-0" aria-hidden="true" />
+          <span>Stok Masuk</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onQuickTransaction('KELUAR')}
+          className="flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-xl font-bold text-sm border border-[#FDBA74] bg-[#FFEDD5] text-[#C2410C] dark:border-[#9A3412] dark:bg-[#431407] dark:text-[#FB923C] active:scale-[0.98] transition-transform cursor-pointer"
+        >
+          <ArrowUpRight className="w-5 h-5 shrink-0" aria-hidden="true" />
+          <span>Stok Keluar</span>
+        </button>
+      </section>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <p className="text-xs font-medium text-slate-500">Total Stok Gudang</p>
-          <p className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 font-mono tabular-nums">
-            {stats.totalStock.toLocaleString('id-ID')}
+      {/* KPI Cards Grid */}
+      <section aria-label="Ringkasan KPI Gudang" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <button
+          type="button"
+          onClick={() => onNavigateMaterials('ALL')}
+          className="text-left p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] hover:border-[#1D4ED8] dark:hover:border-[#3B82F6] transition-colors cursor-pointer"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs sm:text-sm font-semibold text-[#334155] dark:text-[#D1D5DB]">
+              Total Material
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#1D4ED8] dark:bg-blue-950/60 dark:text-[#3B82F6] flex items-center justify-center shrink-0">
+              <Boxes className="w-4.5 h-4.5" aria-hidden="true" />
+            </div>
+          </div>
+          <p className="mt-3 text-2xl sm:text-3xl font-display font-extrabold tabular-nums tracking-tight">
+            {formatNumber(totalMaterials)}
           </p>
-          <p className="mt-1.5 text-xs text-slate-500">Akumulasi seluruh unit tersedia</p>
-        </div>
+          <p className="mt-1 text-xs text-[#334155] dark:text-[#D1D5DB]">SKU aktif terdaftar</p>
+        </button>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <p className="text-xs font-medium text-slate-500">Stok Di Bawah Batas Min</p>
-          <p
-            className={`mt-2 text-2xl sm:text-3xl font-bold tracking-tight font-mono tabular-nums ${
-              stats.lowStockItems.length > 0 ? 'text-red-700' : 'text-teal-700'
-            }`}
-          >
-            {stats.lowStockItems.length.toLocaleString('id-ID')}
+        <button
+          type="button"
+          onClick={() => onNavigateMaterials('MENIPIS')}
+          className="text-left p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] hover:border-[#B45309] dark:hover:border-[#FBBF24] transition-colors cursor-pointer"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs sm:text-sm font-semibold text-[#334155] dark:text-[#D1D5DB]">
+              Perlu Restock
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-[#FEF3C7] text-[#B45309] dark:bg-[#78350F] dark:text-[#FBBF24] flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-4.5 h-4.5" aria-hidden="true" />
+            </div>
+          </div>
+          <p className="mt-3 text-2xl sm:text-3xl font-display font-extrabold tabular-nums tracking-tight text-[#B45309] dark:text-[#FBBF24]">
+            {formatNumber(lowStockItems.length)}
           </p>
-          <p className="mt-1.5 text-xs text-slate-500">
-            {stats.lowStockItems.length > 0 ? (
-              <span className="inline-flex items-center gap-1 text-red-700 font-medium">
-                <AlertTriangle className="w-3.5 h-3.5" />
-                Perlu pengisian ulang
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-teal-700 font-medium">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Semua material aman
-              </span>
-            )}
-          </p>
-        </div>
+          <p className="mt-1 text-xs text-[#334155] dark:text-[#D1D5DB]">Di bawah batas minimum</p>
+        </button>
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-          <p className="text-xs font-medium text-slate-500">Transaksi Hari Ini</p>
-          <p className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 font-mono tabular-nums">
-            {stats.todayCount.toLocaleString('id-ID')}
+        <button
+          type="button"
+          onClick={() => onNavigateMaterials('HABIS')}
+          className="text-left p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] hover:border-[#B91C1C] dark:hover:border-[#F87171] transition-colors cursor-pointer"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs sm:text-sm font-semibold text-[#334155] dark:text-[#D1D5DB]">
+              Stok Habis
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-[#FEE2E2] text-[#B91C1C] dark:bg-[#7F1D1D] dark:text-[#F87171] flex items-center justify-center shrink-0">
+              <XOctagon className="w-4.5 h-4.5" aria-hidden="true" />
+            </div>
+          </div>
+          <p className="mt-3 text-2xl sm:text-3xl font-display font-extrabold tabular-nums tracking-tight text-[#B91C1C] dark:text-[#F87171]">
+            {formatNumber(outOfStockItems.length)}
           </p>
-          <p className="mt-1.5 text-xs text-slate-500 tabular-nums">
-            {stats.todayInbound} masuk · {stats.todayOutbound} keluar
+          <p className="mt-1 text-xs text-[#334155] dark:text-[#D1D5DB]">Stok 0 tersedia</p>
+        </button>
+
+        <button
+          type="button"
+          onClick={onNavigateLogbook}
+          className="text-left p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] hover:border-[#15803D] dark:hover:border-[#4ADE80] transition-colors cursor-pointer"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs sm:text-sm font-semibold text-[#334155] dark:text-[#D1D5DB]">
+              Aktivitas Hari Ini
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-[#DCFCE7] text-[#15803D] dark:bg-[#14532D] dark:text-[#4ADE80] flex items-center justify-center shrink-0">
+              <Activity className="w-4.5 h-4.5" aria-hidden="true" />
+            </div>
+          </div>
+          <p className="mt-3 text-2xl sm:text-3xl font-display font-extrabold tabular-nums tracking-tight">
+            {formatNumber(todayLogs.length)}
           </p>
-        </div>
-      </div>
+          <p className="mt-1 text-xs text-[#334155] dark:text-[#D1D5DB]">
+            Transaksi masuk & keluar
+          </p>
+        </button>
+      </section>
 
-      {/* Main Analytics + Low Stock Alert Split */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        <div className="lg:col-span-7">
-          <TransactionChart transactions={transactions} />
-        </div>
-
-        <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-5 sm:p-6 flex flex-col">
-          <div className="flex items-center justify-between gap-4 pb-4 border-b border-slate-100">
+      {/* Main Content Split: Critical Restock Queue & Recent Audit Log */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+        {/* Critical Stock Panel (7 cols on XL) */}
+        <section
+          aria-label="Material Kritis"
+          className="xl:col-span-7 rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] overflow-hidden"
+        >
+          <div className="px-5 py-4 border-b border-[#CBD5E1] dark:border-[#374151] flex items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">Peringatan Stok Menipis</h2>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Material dengan stok saat ini di bawah batas minimum
+              <h2 className="font-display text-base sm:text-lg font-bold">
+                Daftar Material Kritis
+              </h2>
+              <p className="text-xs text-[#334155] dark:text-[#D1D5DB] mt-0.5">
+                Prioritas restock untuk item habis dan di bawah batas minimum
               </p>
             </div>
             <button
               type="button"
-              onClick={() => onNavigate('materials')}
-              className="text-xs font-medium text-slate-700 hover:text-slate-900 inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
+              onClick={() => onNavigateMaterials('MENIPIS')}
+              className="inline-flex items-center gap-1 text-xs font-bold text-[#1D4ED8] dark:text-[#3B82F6] hover:underline whitespace-nowrap shrink-0 cursor-pointer min-h-[44px] px-2"
             >
-              <span>Kelola</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>Lihat Semua</span>
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
           </div>
 
-          {stats.lowStockItems.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center py-10 text-center">
-              <PackageCheck className="w-10 h-10 text-teal-700 mb-3" />
-              <p className="text-sm font-medium text-slate-900">Tidak ada peringatan stok</p>
-              <p className="mt-1 text-xs text-slate-500 max-w-xs">
-                Seluruh material saat ini memenuhi atau melebihi ambang batas minimum.
+          {criticalItems.length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-[#DCFCE7] text-[#15803D] dark:bg-[#14532D] dark:text-[#4ADE80] flex items-center justify-center">
+                <PackageCheck className="w-6 h-6" aria-hidden="true" />
+              </div>
+              <p className="mt-3 font-display font-bold text-base">Semua Stok Dalam Kondisi Aman</p>
+              <p className="mt-1 text-sm text-[#334155] dark:text-[#D1D5DB]">
+                Tidak ada material yang habis atau berada di bawah batas minimum saat ini.
               </p>
             </div>
           ) : (
-            <ul className="divide-y divide-slate-100 flex-1">
-              {stats.lowStockItems.slice(0, 6).map((item) => {
-                const deficit = item.min_stock - item.current_stock;
+            <div className="divide-y divide-[#CBD5E1] dark:divide-[#374151]">
+              {criticalItems.map((item) => {
+                const status = getStockStatus(item.currentStock, item.minStock);
                 return (
-                  <li
+                  <div
                     key={item.id}
-                    className="py-3.5 flex items-center justify-between gap-3"
+                    className="p-4 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-900 truncate">{item.name}</p>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500 tabular-nums">
-                        <span className="font-mono">{item.code}</span>
-                        <span aria-hidden="true">·</span>
-                        <span className="text-red-700 font-medium font-mono">
-                          {item.current_stock} / {item.min_stock} {item.unit}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-xs font-semibold text-[#334155] dark:text-[#D1D5DB]">
+                          {item.sku}
                         </span>
-                        <span aria-hidden="true">·</span>
-                        <span>Kurang {deficit}</span>
+                        <span aria-hidden="true" className="text-[#CBD5E1] dark:text-[#374151]">
+                          ·
+                        </span>
+                        <span className="text-xs text-[#334155] dark:text-[#D1D5DB] inline-flex items-center gap-1">
+                          <MapPin className="w-3 h-3 shrink-0" aria-hidden="true" />
+                          <span className="font-mono">{item.location}</span>
+                        </span>
+                        <span aria-hidden="true" className="text-[#CBD5E1] dark:text-[#374151]">
+                          ·
+                        </span>
+                        <span className="text-xs text-[#334155] dark:text-[#D1D5DB]">
+                          {item.category}
+                        </span>
+                      </div>
+                      <p className="mt-1 font-semibold text-sm sm:text-base truncate">
+                        {item.name}
+                      </p>
+                      <div className="mt-2 flex items-center gap-3 flex-wrap">
+                        <StockStatusBadge status={status} />
+                        <span className="text-xs sm:text-sm font-medium tabular-nums text-[#334155] dark:text-[#D1D5DB]">
+                          Tersedia:{' '}
+                          <strong className="text-[#0F172A] dark:text-[#F9FAFB]">
+                            {formatNumber(item.currentStock)} {item.unit}
+                          </strong>{' '}
+                          / Min. {formatNumber(item.minStock)} {item.unit}
+                        </span>
                       </div>
                     </div>
 
                     <button
                       type="button"
-                      onClick={() => onQuickRestock(item.id)}
-                      className="min-h-[38px] rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-900 hover:bg-slate-50 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                      onClick={() => onQuickTransaction('MASUK', item.id)}
+                      className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-[#1D4ED8] text-white hover:bg-blue-800 dark:bg-[#3B82F6] dark:text-[#090D16] dark:hover:bg-blue-400 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                     >
-                      + Restock
+                      <ArrowDownLeft className="w-4 h-4 shrink-0" aria-hidden="true" />
+                      <span>Restock</span>
                     </button>
-                  </li>
+                  </div>
                 );
               })}
-            </ul>
+            </div>
           )}
-        </div>
-      </div>
+        </section>
 
-      {/* Recent Transactions Table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-base font-semibold text-slate-900">Mutasi Stok Terbaru</h2>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Riwayat pencatatan barang masuk dan keluar secara real-time
-            </p>
+        {/* Recent Audit Trail Panel (5 cols on XL) */}
+        <section
+          aria-label="Aktivitas Terbaru"
+          className="xl:col-span-5 rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] overflow-hidden"
+        >
+          <div className="px-5 py-4 border-b border-[#CBD5E1] dark:border-[#374151] flex items-center justify-between gap-4">
+            <div>
+              <h2 className="font-display text-base sm:text-lg font-bold">Aktivitas Terbaru</h2>
+              <p className="text-xs text-[#334155] dark:text-[#D1D5DB] mt-0.5">
+                6 pergerakan stok terakhir di gudang
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onNavigateLogbook}
+              className="inline-flex items-center gap-1 text-xs font-bold text-[#1D4ED8] dark:text-[#3B82F6] hover:underline whitespace-nowrap shrink-0 cursor-pointer min-h-[44px] px-2"
+            >
+              <span>Logbook</span>
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => onNavigate('transactions')}
-            className="text-xs font-medium text-slate-700 hover:text-slate-900 inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
-          >
-            <span>Semua Transaksi</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
 
-        {recentTransactions.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-500">
-            Belum ada transaksi tercatat. Mulai dengan mencatat transaksi barang masuk atau keluar.
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {recentTransactions.map((tx) => (
-              <div
-                key={tx.id}
-                className="px-5 sm:px-6 py-3.5 flex items-center justify-between gap-4 hover:bg-slate-50/70 transition-colors"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                      tx.type === 'inbound'
-                        ? 'bg-teal-50 text-teal-700'
-                        : 'bg-amber-50 text-amber-700'
-                    }`}
-                  >
-                    {tx.type === 'inbound' ? (
-                      <ArrowDownLeft className="w-4 h-4" />
-                    ) : (
-                      <ArrowUpRight className="w-4 h-4" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-900 truncate">
-                      {tx.material_name}
-                    </p>
-                    <p className="mt-0.5 text-xs text-slate-500 truncate tabular-nums">
-                      <span className="font-mono">{tx.material_code}</span>
-                      <span aria-hidden="true"> · </span>
-                      <span>{tx.reference_no || '-'}</span>
-                      <span aria-hidden="true"> · </span>
-                      <span>
-                        {new Date(tx.created_at).toLocaleString('id-ID', {
-                          day: '2-digit',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+          {recentLogs.length === 0 ? (
+            <div className="p-8 text-center text-sm text-[#334155] dark:text-[#D1D5DB]">
+              <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-60" aria-hidden="true" />
+              Belum ada aktivitas transaksi tercatat.
+            </div>
+          ) : (
+            <div className="divide-y divide-[#CBD5E1] dark:divide-[#374151]">
+              {recentLogs.map((log) => (
+                <div
+                  key={log.id}
+                  className="p-4 flex items-start justify-between gap-3 hover:bg-slate-50 dark:hover:bg-gray-800/50 transition-colors"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <TransactionBadge type={log.type} />
+                      <span className="font-mono text-xs tabular-nums text-[#334155] dark:text-[#D1D5DB]">
+                        {formatShortTime(log.createdAt)}
                       </span>
+                    </div>
+                    <p className="mt-1.5 font-semibold text-sm truncate">{log.materialName}</p>
+                    <p className="mt-0.5 text-xs text-[#334155] dark:text-[#D1D5DB] truncate">
+                      {log.party} · {log.pic}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p
+                      className={`font-mono text-sm font-bold tabular-nums ${
+                        log.type === 'MASUK'
+                          ? 'text-[#15803D] dark:text-[#4ADE80]'
+                          : 'text-[#C2410C] dark:text-[#FB923C]'
+                      }`}
+                    >
+                      {log.type === 'MASUK' ? '+' : '-'}
+                      {formatNumber(log.quantity)} {log.materialUnit}
+                    </p>
+                    <p className="mt-0.5 font-mono text-xs tabular-nums text-[#334155] dark:text-[#D1D5DB]">
+                      {formatNumber(log.stockBefore)} → {formatNumber(log.stockAfter)}
                     </p>
                   </div>
                 </div>
-
-                <div className="text-right shrink-0 tabular-nums">
-                  <p
-                    className={`text-sm font-semibold font-mono ${
-                      tx.type === 'inbound' ? 'text-teal-700' : 'text-amber-700'
-                    }`}
-                  >
-                    {tx.type === 'inbound' ? '+' : '-'}
-                    {tx.quantity.toLocaleString('id-ID')} {tx.unit}
-                  </p>
-                  <p className="text-[11px] font-mono text-slate-500">
-                    Stok: {tx.stock_before} → {tx.stock_after}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
-};
+}
