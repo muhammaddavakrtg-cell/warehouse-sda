@@ -430,7 +430,7 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
             </div>
 
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Akun baru berstatus Hanya Lihat. Admin dapat menaikkan level akun Anda.
+              Akun baru berlevel Member (hanya lihat). Admin dapat menaikkan level akun Anda.
             </p>
 
             <button

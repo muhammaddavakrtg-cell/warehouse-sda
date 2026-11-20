@@ -76,7 +76,7 @@ export interface ToastMessage {
   description?: string;
 }
 
-export type AccessLevel = 'admin' | 'editor' | 'viewer';
+export type AccessLevel = 'admin' | 'staff' | 'member';
 
 export interface UserProfile {
   id: string;
@@ -91,10 +91,10 @@ export interface UserProfile {
 export function getAccessRoleLabel(role?: string): string {
   switch (role) {
     case 'admin':
-      return 'Administrator';
-    case 'editor':
-      return 'Operator / Editor';
+      return 'Admin';
+    case 'staff':
+      return 'Staff';
     default:
-      return 'Pengamat / Viewer';
+      return 'Member';
   }
 }

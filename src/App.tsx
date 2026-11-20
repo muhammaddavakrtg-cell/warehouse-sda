@@ -7,6 +7,7 @@ import { LogbookView } from './components/LogbookView';
 import { MaterialFormModal } from './components/MaterialFormModal';
 import { MaterialsView } from './components/MaterialsView';
 import { ProfilePanel } from './components/ProfilePanel';
+import { UserManagementPanel } from './components/UserManagementPanel';
 import { ToastContainer } from './components/ToastContainer';
 import { TransactionModal } from './components/TransactionModal';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
@@ -164,11 +165,11 @@ export default function App() {
       .then(({ data }) => {
         if (!active) return;
 
-        const roleValue = (data?.role as AccessLevel) || 'viewer';
+        const roleValue = (data?.role as AccessLevel) || 'member';
         const canEditValue =
           typeof data?.can_edit === 'boolean'
             ? data.can_edit
-            : roleValue === 'admin' || roleValue === 'editor';
+            : roleValue === 'admin' || roleValue === 'staff';
 
         const fallbackEmail = session.user.email ?? '';
         const fallbackUsername = fallbackEmail.split('@')[0] || 'user';
@@ -193,7 +194,7 @@ export default function App() {
           username: fallbackUsername,
           fullName: fallbackUsername,
           email: fallbackEmail,
-          role: 'viewer',
+          role: 'member',
           canEdit: false,
         });
         setProfileLoading(false);
@@ -479,6 +480,7 @@ export default function App() {
         onOpenTransaction={(type) => handleOpenTransaction(type)}
         criticalCount={criticalCount}
         canEdit={canEdit}
+         canManageUsers={profile?.role === 'admin' || profile?.role === 'staff'}
       >
         {/* Bar info profil, level, dan izin akses pengguna */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs">
@@ -588,6 +590,9 @@ export default function App() {
         )}
 
         {activeTab === 'logbook' && <LogbookView logs={logs} />}
+                {activeTab === 'users' && (
+          <UserManagementPanel profile={profile} onNotify={pushToast} />
+        )}
                 {activeTab === 'profile' && (
           <ProfilePanel
             profile={profile}

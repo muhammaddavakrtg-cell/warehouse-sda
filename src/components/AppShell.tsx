@@ -8,11 +8,12 @@ import {
   Package,
   Plus,
   UserRound,
+  Users,
 } from 'lucide-react';
 import type { TransactionType } from '../types/warehouse';
 import { ThemeToggle } from './ThemeToggle';
 
-export type NavTab = 'dashboard' | 'materials' | 'logbook' | 'profile';
+export type NavTab = 'dashboard' | 'materials' | 'logbook' | 'users' | 'profile';
 
 interface AppShellProps {
   activeTab: NavTab;
@@ -22,6 +23,7 @@ interface AppShellProps {
   onOpenTransaction: (defaultType: TransactionType) => void;
   criticalCount: number;
   canEdit?: boolean;
+  canManageUsers?: boolean;
   children: ReactNode;
 }
 
@@ -29,6 +31,7 @@ const NAV_ITEMS: { id: NavTab; label: string; mobileLabel: string; icon: typeof 
   { id: 'dashboard', label: 'Dashboard', mobileLabel: 'Beranda', icon: LayoutDashboard },
   { id: 'materials', label: 'Master Material', mobileLabel: 'Material', icon: Boxes },
   { id: 'logbook', label: 'Logbook Audit', mobileLabel: 'Logbook', icon: ClipboardList },
+  { id: 'users', label: 'Kelola User', mobileLabel: 'User', icon: Users },
   { id: 'profile', label: 'Profil Saya', mobileLabel: 'Profil', icon: UserRound },
 ];
 
@@ -39,8 +42,10 @@ export function AppShell({
   onToggleTheme,
   onOpenTransaction,
   criticalCount,
+  canManageUsers = false,
   children,
 }: AppShellProps) {
+  const visibleNavItems = NAV_ITEMS.filter((n) => n.id !== 'users' || canManageUsers);
   const currentTitle = NAV_ITEMS.find((n) => n.id === activeTab)?.label ?? 'Dashboard';
 
   return (
@@ -57,7 +62,7 @@ export function AppShell({
         </div>
 
         <nav className="flex-1 px-3 py-5 space-y-1.5" aria-label="Navigasi Utama">
-          {NAV_ITEMS.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
@@ -162,7 +167,9 @@ export function AppShell({
         aria-label="Navigasi Mobile"
         className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#111827]/95 backdrop-blur-md border-t border-[#CBD5E1] dark:border-[#374151] pb-safe"
       >
-        <div className="grid grid-cols-5 h-[60px] items-center px-1">
+        <div
+          className={`grid ${canManageUsers ? 'grid-cols-6' : 'grid-cols-5'} h-[60px] items-center px-1`}
+        >
           <button
             type="button"
             onClick={() => onTabChange('dashboard')}
@@ -210,6 +217,21 @@ export function AppShell({
             <ClipboardList className="w-5 h-5" aria-hidden="true" />
             <span className="text-[11px] mt-0.5 leading-none whitespace-nowrap">Logbook</span>
           </button>
+
+          {canManageUsers && (
+            <button
+              type="button"
+              onClick={() => onTabChange('users')}
+              className={`flex flex-col items-center justify-center min-h-[44px] rounded-xl transition-colors cursor-pointer ${
+                activeTab === 'users'
+                  ? 'text-[#1D4ED8] dark:text-[#3B82F6] font-bold'
+                  : 'text-[#334155] dark:text-[#D1D5DB] font-medium'
+              }`}
+            >
+              <Users className="w-5 h-5" aria-hidden="true" />
+              <span className="text-[11px] mt-0.5 leading-none whitespace-nowrap">User</span>
+            </button>
+          )}
 
           <button
             type="button"
