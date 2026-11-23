@@ -37,7 +37,8 @@ function mapMaterialRow(row: any): Material {
     unit: row.unit,
     currentStock: Number(row.current_stock ?? 0),
     minStock: Number(row.min_stock ?? 0),
-    location: row.location ?? '',
+    location: row.location ?? '-',
+    description: row.description ?? '',
     updatedAt: row.updated_at ?? '',
     createdAt: row.created_at ?? '',
   };
@@ -355,8 +356,8 @@ export default function App() {
           category: input.category.trim(),
           unit: input.unit.trim(),
           current_stock: Number(input.currentStock ?? 0),
+          description: input.description?.trim() || '',
           min_stock: Number(input.minStock ?? 0),
-          location: input.location.trim(),
         })
         .select()
         .single();
@@ -390,7 +391,6 @@ export default function App() {
           category: input.category.trim(),
           unit: input.unit.trim(),
           min_stock: Number(input.minStock ?? 0),
-          location: input.location.trim(),
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)

@@ -58,7 +58,7 @@ export function TransactionModal({
   useEffect(() => {
     if (isOpen) {
       const targetMat =
-        materials.find((m) => m.id === initialMaterialId) || materials[0] || null;
+        materials.find((m) => m.id === initialMaterialId) || null;
       setType(initialType);
       setMaterialId(targetMat?.id || '');
       setMaterialSearch('');
@@ -66,7 +66,7 @@ export function TransactionModal({
       setParty('');
       setUsageArea('');
       setTransactionDate(getTodayDateString());
-      setDescription((targetMat as any)?.description ?? '');
+      setDescription(targetMat?.description ?? '');
       setErrorMsg('');
     }
   }, [isOpen, initialType, initialMaterialId, materials]);
@@ -74,7 +74,7 @@ export function TransactionModal({
   useEffect(() => {
     if (!isOpen) return;
     if (type === 'KELUAR') {
-      setDescription((selectedMaterial as any)?.description ?? '');
+      setDescription(selectedMaterial?.description ?? '');
     }
   }, [isOpen, type, selectedMaterial]);
 
@@ -85,7 +85,7 @@ export function TransactionModal({
       (m) =>
         m.name.toLowerCase().includes(q) ||
         m.sku.toLowerCase().includes(q) ||
-        m.location.toLowerCase().includes(q)
+        (m.location || '').toLowerCase().includes(q)
     );
   }, [materials, materialSearch]);
 
@@ -241,12 +241,11 @@ export function TransactionModal({
                 onChange={(e) => {
                   const val = e.target.value;
                   setMaterialSearch(val);
-                  const firstMatch = materials.find(
-                    (m) =>
-                      m.name.toLowerCase().includes(val.toLowerCase()) ||
-                      m.sku.toLowerCase().includes(val.toLowerCase())
+                  const normalized = val.trim().toLowerCase();
+                  const exactMatch = materials.find(
+                    (m) => m.sku.trim().toLowerCase() === normalized
                   );
-                  if (firstMatch) setMaterialId(firstMatch.id);
+                  setMaterialId(exactMatch?.id || '');
                 }}
                 placeholder="Ketik QCODE atau nama material untuk cari cepat..."
                 className="w-full min-h-[44px] pl-9 pr-3 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
@@ -269,6 +268,17 @@ export function TransactionModal({
                 ))
               )}
             </select>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="tx-material-name" className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1">Nama Material</label>
+                <input id="tx-material-name" value={selectedMaterial?.name || ''} readOnly placeholder="Terisi otomatis dari QCODE" className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-slate-100 dark:bg-gray-800/80 text-sm" />
+              </div>
+              <div>
+                <label htmlFor="tx-material-uom" className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1">Unit of Measure (UoM)</label>
+                <input id="tx-material-uom" value={selectedMaterial?.unit || ''} readOnly placeholder="Otomatis" className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-slate-100 dark:bg-gray-800/80 text-sm" />
+              </div>
+            </div>
 
             {selectedMaterial && (
               <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#090D16] border border-[#CBD5E1] dark:border-[#374151] text-xs">
