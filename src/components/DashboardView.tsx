@@ -93,7 +93,7 @@ export function DashboardView({
           <p className="mt-3 text-2xl sm:text-3xl font-display font-extrabold tabular-nums tracking-tight">
             {formatNumber(totalMaterials)}
           </p>
-          <p className="mt-1 text-xs text-[#334155] dark:text-[#D1D5DB]">qcode aktif terdaftar</p>
+          <p className="mt-1 text-xs text-[#334155] dark:text-[#D1D5DB]">QCODE aktif terdaftar</p>
         </button>
 
         <button

@@ -108,7 +108,7 @@ export function MaterialsView({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari qcode, nama material, atau lokasi rak..."
+              placeholder="Cari QCODE, nama material, atau lokasi rak..."
               aria-label="Cari material"
               className="w-full min-h-[44px] pl-10 pr-10 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm text-[#0F172A] dark:text-[#F9FAFB] placeholder:text-slate-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
             />
@@ -299,7 +299,7 @@ export function MaterialsView({
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-xs font-bold text-[#334155] dark:text-[#D1D5DB]">
-                    <th className="py-3.5 px-4 whitespace-nowrap">qcode</th>
+                    <th className="py-3.5 px-4 whitespace-nowrap">QCODE</th>
                     <th className="py-3.5 px-4">Material & Kategori</th>
                     <th className="py-3.5 px-4 whitespace-nowrap">Lokasi Rak</th>
                     <th className="py-3.5 px-4 text-right whitespace-nowrap">Stok Saat Ini</th>

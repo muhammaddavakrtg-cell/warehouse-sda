@@ -177,7 +177,7 @@ export function MaterialFormModal({
                 htmlFor="mat-qcode"
                 className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1"
               >
-                qcode Material *
+                QCODE Material *
               </label>
               <input
                 id="mat-qcode"
