@@ -17,6 +17,9 @@ const PRIMARY_BTN_CLASS =
 export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
   const [mode, setMode] = useState<'login' | 'forgot' | 'register'>('login');
 
+  // Bagian login: 'staff' = Admin & Staf, 'employee' = Karyawan
+  const [group, setGroup] = useState<'staff' | 'employee'>('staff');
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,6 +44,12 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
     setMode(next);
   };
 
+  const switchGroup = (next: 'staff' | 'employee') => {
+    setGroup(next);
+    setErrorMsg('');
+    setInfoMsg('');
+  };
+
   const resolveEmailByUsername = async (rawUsername: string): Promise<string> => {
     const clean = rawUsername.trim().toLowerCase();
     if (!clean) {
@@ -51,7 +60,7 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
       return clean;
     }
 
-         if (supabase) {
+    if (supabase) {
       const { data, error } = await supabase.rpc('get_login_email', {
         p_username: clean,
       });
@@ -80,7 +89,7 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
 
     try {
       const resolvedEmail = await resolveEmailByUsername(username);
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error } = await supabase.auth.signInWithPassword({
         email: resolvedEmail,
         password,
       });
@@ -90,6 +99,27 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
             ? 'Username atau password salah.'
             : error.message
         );
+      } else {
+        // Cek apakah level akun sesuai dengan tab yang dipilih
+        const userId = signInData.user?.id;
+        if (userId) {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', userId)
+            .maybeSingle();
+
+          const role = String(prof?.role ?? '').toLowerCase();
+          const isStaffGroup = role === 'admin' || role === 'staff';
+
+          if (role && group === 'staff' && !isStaffGroup) {
+            await supabase.auth.signOut();
+            setErrorMsg('Akun ini bukan Admin/Staf. Silakan pilih tab Karyawan.');
+          } else if (role && group === 'employee' && isStaffGroup) {
+            await supabase.auth.signOut();
+            setErrorMsg('Akun ini Admin/Staf. Silakan pilih tab Admin & Staf.');
+          }
+        }
       }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Gagal menghubungi server autentikasi.');
@@ -175,6 +205,7 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
 
       // Konfirmasi email aktif: user harus klik tautan di emailnya dulu.
       setMode('login');
+      setGroup('employee');
       setUsername(cleanUsername);
       setInfoMsg(
         `Pendaftaran berhasil. Kami mengirim tautan konfirmasi ke ${cleanEmail}. Buka email tersebut (cek juga folder Spam), lalu masuk di sini.`
@@ -226,17 +257,26 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
 
   const subtitle =
     mode === 'login'
-      ? 'Masuk menggunakan username dan password'
+      ? group === 'staff'
+        ? 'Masuk sebagai Admin atau Staf'
+        : 'Masuk sebagai Karyawan'
       : mode === 'register'
         ? 'Buat akun baru'
         : 'Reset password melalui email terdaftar';
+
+  const tabClass = (active: boolean) =>
+    `py-2 rounded-lg text-sm font-semibold transition cursor-pointer ${
+      active
+        ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-white'
+        : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+    }`;
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center px-4 py-8 bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold tracking-tight">GudangPro</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Inventory Warehouse</h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>
           </div>
           <button
@@ -273,6 +313,25 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
             className="mb-4 p-3 rounded-xl text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800"
           >
             {infoMsg}
+          </div>
+        )}
+
+        {mode === 'login' && (
+          <div className="grid grid-cols-2 gap-1 p-1 mb-5 rounded-xl bg-slate-100 dark:bg-slate-800">
+            <button
+              type="button"
+              onClick={() => switchGroup('staff')}
+              className={tabClass(group === 'staff')}
+            >
+              Admin & Staf
+            </button>
+            <button
+              type="button"
+              onClick={() => switchGroup('employee')}
+              className={tabClass(group === 'employee')}
+            >
+              Karyawan
+            </button>
           </div>
         )}
 
@@ -330,16 +389,18 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
               {isSubmitting ? 'Memproses masuk...' : 'Masuk'}
             </button>
 
-            <p className="text-center text-xs text-slate-600 dark:text-slate-400">
-              Belum punya akun?{' '}
-              <button
-                type="button"
-                onClick={() => goToMode('register')}
-                className="font-semibold text-blue-600 hover:underline dark:text-blue-400 cursor-pointer"
-              >
-                Daftar
-              </button>
-            </p>
+            {group === 'employee' && (
+              <p className="text-center text-xs text-slate-600 dark:text-slate-400">
+                Belum punya akun?{' '}
+                <button
+                  type="button"
+                  onClick={() => goToMode('register')}
+                  className="font-semibold text-blue-600 hover:underline dark:text-blue-400 cursor-pointer"
+                >
+                  Daftar
+                </button>
+              </p>
+            )}
           </form>
         )}
 
