@@ -83,7 +83,7 @@ export function AppShell({
             className="w-9 h-9 rounded-xl object-contain shrink-0"
           />
           <span className="font-display text-lg font-extrabold tracking-tight whitespace-nowrap truncate">
-            Nama Perusahaan
+            Inventory SDA
           </span>
         </div>
 
