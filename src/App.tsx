@@ -100,6 +100,7 @@ export default function App() {
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
   const [customNotifications, setCustomNotifications] = useState<NotificationItem[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
@@ -405,7 +406,7 @@ export default function App() {
     [materials]
   );
 
- const handleOpenTransaction = useCallback(
+  const handleOpenTransaction = useCallback(
     (type: TransactionType, materialId?: string) => {
       if (!canEdit) {
         pushToast('info', 'Mode Hanya Lihat', 'Akun Anda tidak memiliki izin mencatat transaksi.');
@@ -444,7 +445,6 @@ export default function App() {
       const normalizedSku = input.sku.trim().toUpperCase();
       const qtyToAdd = Math.max(1, Number(input.currentStock ?? 1));
 
-      // Cek apakah QCODE (SKU) sudah ada di daftar material
       const existing = materials.find(
         (m) => m.sku.trim().toUpperCase() === normalizedSku
       );
@@ -528,12 +528,6 @@ export default function App() {
         throw new Error(error.message || 'Gagal menambahkan material.');
       }
 
-      await fetchWarehouseData();
-      pushToast('success', 'Material berhasil ditambahkan', `${created.sku} — ${created.name}`);
-    },
-    [assertCanEdit, materials, profile, session, fetchWarehouseData, pushToast]
-  );
-
       const created = mapMaterialRow(data);
       setCustomNotifications((prev) => [
         {
@@ -545,6 +539,13 @@ export default function App() {
         },
         ...prev,
       ]);
+
+      await fetchWarehouseData();
+      pushToast('success', 'Material berhasil ditambahkan', `${created.sku} — ${created.name}`);
+    },
+    [assertCanEdit, materials, profile, session, fetchWarehouseData, pushToast]
+  );
+
   const handleUpdateMaterial = useCallback(
     async (
       id: string,
@@ -589,7 +590,6 @@ export default function App() {
         throw new Error(error.message || 'Gagal memperbarui material.');
       }
 
-      // Catat penambahan sebagai transaksi MASUK agar muncul di Logbook.
       if (addedStock > 0) {
         const { error: logError } = await supabase
           .from('stock_logs')
@@ -612,7 +612,6 @@ export default function App() {
           });
 
         if (logError) {
-          // Stok sudah ter-update; tampilkan pesan eksplisit agar kegagalan log tidak tersembunyi.
           throw new Error(
             `Stok berhasil diperbarui menjadi ${stockAfter} ${input.unit}, tetapi riwayat transaksi gagal disimpan: ${logError.message}`
           );
@@ -793,6 +792,7 @@ export default function App() {
             </button>
           </div>
         )}
+
         {activeTab === 'dashboard' && (
           <DashboardView
             materials={materials}
@@ -856,7 +856,7 @@ export default function App() {
         )}
       </AppShell>
 
-        {txChoiceOpen && (
+      {txChoiceOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-5">
             <div className="flex items-center justify-between">
@@ -909,6 +909,7 @@ export default function App() {
           </div>
         </div>
       )}
+
       <TransactionModal
         isOpen={txModalOpen}
         initialType={txInitialType}
@@ -929,7 +930,7 @@ export default function App() {
         onUpdate={handleUpdateMaterial}
       />
 
-{logoutConfirmOpen && (
+      {logoutConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl text-center space-y-4">
             <div className="mx-auto w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center text-xl font-bold">
@@ -965,6 +966,7 @@ export default function App() {
           </div>
         </div>
       )}
+
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </>
   );
