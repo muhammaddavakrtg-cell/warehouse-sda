@@ -90,6 +90,7 @@ export default function App() {
   const [txModalOpen, setTxModalOpen] = useState(false);
   const [txInitialType, setTxInitialType] = useState<TransactionType>('MASUK');
   const [txInitialMaterialId, setTxInitialMaterialId] = useState<string | undefined>(undefined);
+  const [txChoiceOpen, setTxChoiceOpen] = useState(false);
 
   const [matModalOpen, setMatModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
@@ -588,7 +589,13 @@ export default function App() {
         onTabChange={setActiveTab}
         theme={theme}
         onToggleTheme={toggleTheme}
-        onOpenTransaction={(type) => handleOpenTransaction(type)}
+        onOpenTransaction={() => {
+          if (!canEdit) {
+            pushToast('info', 'Mode Hanya Lihat', 'Akun Anda tidak memiliki izin mencatat transaksi.');
+            return;
+          }
+          setTxChoiceOpen(true);
+        }}
         criticalCount={criticalCount}
         canEdit={canEdit}
         canManageUsers={profile?.role === 'admin' || profile?.role === 'staff'}
@@ -677,6 +684,59 @@ export default function App() {
         )}
       </AppShell>
 
+        {txChoiceOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                Pilih Jenis Transaksi
+              </h2>
+              <button
+                type="button"
+                onClick={() => setTxChoiceOpen(false)}
+                className="px-2.5 py-1 rounded-lg text-sm font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setTxChoiceOpen(false);
+                  setEditingMaterial(null);
+                  setMatModalOpen(true);
+                }}
+                className="p-4 rounded-2xl border-2 border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/40 hover:border-emerald-500 text-left transition cursor-pointer space-y-1"
+              >
+                <div className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                  + Tambah Material
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Input material baru atau stok masuk
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setTxChoiceOpen(false);
+                  handleOpenTransaction('KELUAR');
+                }}
+                className="p-4 rounded-2xl border-2 border-orange-200 dark:border-orange-800 bg-orange-50/70 dark:bg-orange-950/40 hover:border-orange-500 text-left transition cursor-pointer space-y-1"
+              >
+                <div className="text-sm font-bold text-[#C2410C] dark:text-orange-400">
+                  ↗ Material Keluar
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Catat pengambilan & pengurangan stok
+                </p>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <TransactionModal
         isOpen={txModalOpen}
         initialType={txInitialType}
