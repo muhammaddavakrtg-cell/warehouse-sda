@@ -12,8 +12,17 @@ interface MaterialFormModalProps {
   isOpen: boolean;
   editingMaterial: Material | null;
   onClose: () => void;
-  onCreate: (input: CreateMaterialInput) => Promise<void>;
-  onUpdate: (id: string, input: UpdateMaterialInput) => Promise<void>;
+  onCreate: (input: CreateMaterialInput & {
+    description?: string;
+    entryDate?: string;
+  }) => Promise<void>;
+  onUpdate: (
+    id: string,
+    input: UpdateMaterialInput & {
+      description?: string;
+      entryDate?: string;
+    }
+  ) => Promise<void>;
 }
 
 const CATEGORY_OPTIONS: MaterialCategory[] = [
@@ -26,6 +35,14 @@ const CATEGORY_OPTIONS: MaterialCategory[] = [
 ];
 
 const UNIT_OPTIONS: MaterialUnit[] = ['pcs', 'kg', 'roll', 'box', 'meter', 'liter', 'unit'];
+
+function getTodayDateString(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 export function MaterialFormModal({
   isOpen,
@@ -41,6 +58,8 @@ export function MaterialFormModal({
   const [currentStock, setCurrentStock] = useState<number>(0);
   const [minStock, setMinStock] = useState<number>(10);
   const [location, setLocation] = useState('');
+  const [description, setDescription] = useState('');
+  const [entryDate, setEntryDate] = useState<string>(() => getTodayDateString());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -54,6 +73,12 @@ export function MaterialFormModal({
         setCurrentStock(editingMaterial.currentStock);
         setMinStock(editingMaterial.minStock);
         setLocation(editingMaterial.location);
+        setDescription((editingMaterial as any).description ?? '');
+        setEntryDate(
+          (editingMaterial as any).entryDate ||
+            editingMaterial.createdAt?.slice(0, 10) ||
+            getTodayDateString()
+        );
       } else {
         setSku('');
         setName('');
@@ -62,6 +87,8 @@ export function MaterialFormModal({
         setCurrentStock(0);
         setMinStock(10);
         setLocation('');
+        setDescription('');
+        setEntryDate(getTodayDateString());
       }
       setErrorMsg('');
     }
@@ -90,6 +117,8 @@ export function MaterialFormModal({
           unit,
           minStock: Math.max(0, Number(minStock) || 0),
           location: location.trim(),
+          description: description.trim(),
+          entryDate,
         });
       } else {
         await onCreate({
@@ -100,6 +129,8 @@ export function MaterialFormModal({
           currentStock: Math.max(0, Number(currentStock) || 0),
           minStock: Math.max(0, Number(minStock) || 0),
           location: location.trim(),
+          description: description.trim(),
+          entryDate,
         });
       }
       onClose();
@@ -279,6 +310,41 @@ export function MaterialFormModal({
             </div>
           </div>
 
+          {/* Tanggal Material Masuk */}
+          <div>
+            <label
+              htmlFor="mat-entry-date"
+              className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
+            >
+              Tanggal Material Masuk
+            </label>
+            <input
+              id="mat-entry-date"
+              type="date"
+              value={entryDate}
+              onChange={(e) => setEntryDate(e.target.value)}
+              className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
+            />
+          </div>
+
+          {/* Deskripsi Material */}
+          <div>
+            <label
+              htmlFor="mat-description"
+              className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
+            >
+              Deskripsi Material
+            </label>
+            <textarea
+              id="mat-description"
+              rows={2}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Contoh: Kabel tembaga isolasi PVC, panjang 100m/roll"
+              className="w-full px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
+            />
+          </div>
+
           {errorMsg && (
             <div
               role="alert"
@@ -302,7 +368,9 @@ export function MaterialFormModal({
               className="flex-1 inline-flex items-center justify-center gap-2 min-h-[48px] px-5 rounded-xl text-sm font-bold bg-[#1D4ED8] text-white hover:bg-blue-800 dark:bg-[#3B82F6] dark:text-[#090D16] dark:hover:bg-blue-400 transition-colors disabled:opacity-50 cursor-pointer"
             >
               <Check className="w-4 h-4 shrink-0" aria-hidden="true" />
-              <span>{isSubmitting ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Simpan Material'}</span>
+              <span>
+                {isSubmitting ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Simpan Material'}
+              </span>
             </button>
           </div>
         </form>

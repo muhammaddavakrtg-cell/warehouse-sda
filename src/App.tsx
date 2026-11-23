@@ -28,7 +28,7 @@ import {
 } from './types/warehouse';
 import { getStockStatus } from './utils/warehouse';
 
-function mapMaterialRow(row: any): Material {
+function mapMaterialRow(row: any): Material & { description?: string; entryDate?: string } {
   return {
     id: row.id,
     sku: row.sku,
@@ -38,6 +38,8 @@ function mapMaterialRow(row: any): Material {
     currentStock: Number(row.current_stock ?? 0),
     minStock: Number(row.min_stock ?? 0),
     location: row.location ?? '',
+    description: row.description ?? '',
+    entryDate: row.entry_date ?? row.created_at ?? '',
     updatedAt: row.updated_at ?? '',
     createdAt: row.created_at ?? '',
   };
@@ -258,7 +260,6 @@ export default function App() {
   const handleLogout = useCallback(async (event: 'LOGOUT' | 'LOGOUT_IDLE' = 'LOGOUT') => {
     if (supabase) {
       try {
-        // Catat aktivitas keluar sebelum sesi ditutup
         await supabase.rpc('log_activity', {
           p_event: event,
           p_user_agent: navigator.userAgent,
@@ -273,7 +274,7 @@ export default function App() {
     setActiveTab('dashboard');
   }, []);
 
-  // Logout otomatis jika tidak ada aktivitas (ubah angka menit di bawah sesuai kebutuhan)
+  // Logout otomatis jika tidak ada aktivitas
   useEffect(() => {
     if (!session) return;
 
@@ -344,7 +345,7 @@ export default function App() {
   }, []);
 
   const handleCreateMaterial = useCallback(
-    async (input: CreateMaterialInput) => {
+    async (input: CreateMaterialInput & { description?: string; entryDate?: string }) => {
       assertCanEdit();
 
       if (!supabase) {
@@ -354,18 +355,27 @@ export default function App() {
       }
 
       const newId = `mat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const insertPayload: Record<string, any> = {
+        id: newId,
+        sku: input.sku.trim(),
+        name: input.name.trim(),
+        category: input.category.trim(),
+        unit: input.unit.trim(),
+        current_stock: Number(input.currentStock ?? 0),
+        min_stock: Number(input.minStock ?? 0),
+        location: input.location.trim(),
+      };
+
+      if (input.description !== undefined) {
+        insertPayload.description = input.description.trim();
+      }
+      if (input.entryDate) {
+        insertPayload.entry_date = input.entryDate;
+      }
+
       const { data, error } = await supabase
         .from('materials')
-        .insert({
-          id: newId,
-          sku: input.sku.trim(),
-          name: input.name.trim(),
-          category: input.category.trim(),
-          unit: input.unit.trim(),
-          current_stock: Number(input.currentStock ?? 0),
-          min_stock: Number(input.minStock ?? 0),
-          location: input.location.trim(),
-        })
+        .insert(insertPayload)
         .select()
         .single();
 
@@ -381,7 +391,10 @@ export default function App() {
   );
 
   const handleUpdateMaterial = useCallback(
-    async (id: string, input: UpdateMaterialInput) => {
+    async (
+      id: string,
+      input: UpdateMaterialInput & { description?: string; entryDate?: string }
+    ) => {
       assertCanEdit();
 
       if (!supabase) {
@@ -390,17 +403,26 @@ export default function App() {
         );
       }
 
+      const updatePayload: Record<string, any> = {
+        sku: input.sku.trim(),
+        name: input.name.trim(),
+        category: input.category.trim(),
+        unit: input.unit.trim(),
+        min_stock: Number(input.minStock ?? 0),
+        location: input.location.trim(),
+        updated_at: new Date().toISOString(),
+      };
+
+      if (input.description !== undefined) {
+        updatePayload.description = input.description.trim();
+      }
+      if (input.entryDate) {
+        updatePayload.entry_date = input.entryDate;
+      }
+
       const { data, error } = await supabase
         .from('materials')
-        .update({
-          sku: input.sku.trim(),
-          name: input.name.trim(),
-          category: input.category.trim(),
-          unit: input.unit.trim(),
-          min_stock: Number(input.minStock ?? 0),
-          location: input.location.trim(),
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', id)
         .select()
         .single();
@@ -417,7 +439,9 @@ export default function App() {
   );
 
   const handleSubmitTransaction = useCallback(
-    async (payload: StockTransactionInput) => {
+    async (
+      payload: StockTransactionInput & { transactionDate?: string; description?: string }
+    ) => {
       assertCanEdit();
 
       if (!supabase) {
@@ -443,42 +467,63 @@ export default function App() {
         throw new Error(`Stok tidak mencukupi (tersedia ${stockBefore} ${target.unit}).`);
       }
 
+      const materialUpdatePayload: Record<string, any> = {
+        current_stock: stockAfter,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Perbarui deskripsi material saat Stok Masuk diisi
+      if (payload.type === 'MASUK' && payload.description !== undefined) {
+        materialUpdatePayload.description = payload.description.trim();
+      }
+
       const { error: updateErr } = await supabase
         .from('materials')
-        .update({
-          current_stock: stockAfter,
-          updated_at: new Date().toISOString(),
-        })
+        .update(materialUpdatePayload)
         .eq('id', target.id);
 
       if (updateErr) {
         throw new Error(updateErr.message || 'Gagal memperbarui stok material.');
       }
 
-      const defaultPic =
-        payload.pic?.trim() ||
-        profile?.fullName ||
-        profile?.username ||
-        session?.user?.email?.split('@')[0] ||
-        'Staf Gudang';
+      const partyValue = payload.party.trim();
+      const picValue =
+        payload.type === 'KELUAR'
+          ? payload.pic?.trim() || '-'
+          : payload.pic?.trim() ||
+            profile?.fullName ||
+            profile?.username ||
+            session?.user?.email?.split('@')[0] ||
+            'Staf Gudang';
+      const descriptionValue =
+        payload.description?.trim() ||
+        payload.notes?.trim() ||
+        (target as any).description ||
+        '';
       const logId = `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+      const logInsertPayload: Record<string, any> = {
+        id: logId,
+        material_id: target.id,
+        material_sku: target.sku,
+        material_name: target.name,
+        material_unit: target.unit,
+        type: payload.type,
+        quantity: qty,
+        stock_before: stockBefore,
+        stock_after: stockAfter,
+        party: partyValue,
+        pic: picValue,
+        notes: descriptionValue,
+      };
+
+      if (payload.transactionDate) {
+        logInsertPayload.transaction_date = payload.transactionDate;
+      }
 
       const { data: logRow, error: logErr } = await supabase
         .from('stock_logs')
-        .insert({
-          id: logId,
-          material_id: target.id,
-          material_sku: target.sku,
-          material_name: target.name,
-          material_unit: target.unit,
-          type: payload.type,
-          quantity: qty,
-          stock_before: stockBefore,
-          stock_after: stockAfter,
-          party: payload.party.trim(),
-          pic: defaultPic,
-          notes: payload.notes?.trim() ?? '',
-        })
+        .insert(logInsertPayload)
         .select()
         .single();
 
@@ -614,10 +659,10 @@ export default function App() {
         {activeTab === 'activity' && (profile?.role === 'admin' || profile?.role === 'staff') && (
           <ActivityLogPanel profile={profile} onNotify={pushToast} />
         )}
-                {activeTab === 'users' && (
+        {activeTab === 'users' && (
           <UserManagementPanel profile={profile} onNotify={pushToast} />
         )}
-                {activeTab === 'profile' && (
+        {activeTab === 'profile' && (
           <ProfilePanel
             profile={profile}
             onProfileUpdated={setProfile}

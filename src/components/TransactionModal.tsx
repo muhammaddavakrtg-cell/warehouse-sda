@@ -17,7 +17,18 @@ interface TransactionModalProps {
   initialMaterialId?: string;
   materials: Material[];
   onClose: () => void;
-  onSubmit: (payload: StockTransactionInput) => Promise<void>;
+  onSubmit: (payload: StockTransactionInput & {
+    transactionDate?: string;
+    description?: string;
+  }) => Promise<void>;
+}
+
+function getTodayDateString(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 export function TransactionModal({
@@ -32,24 +43,41 @@ export function TransactionModal({
   const [materialId, setMaterialId] = useState<string>(initialMaterialId || '');
   const [materialSearch, setMaterialSearch] = useState('');
   const [quantity, setQuantity] = useState<number>(1);
-  const [party, setParty] = useState('');
-  const [pic, setPic] = useState('Staf Gudang');
-  const [notes, setNotes] = useState('');
+  const [party, setParty] = useState(''); // Sumber (MASUK) / Nama Pengambil (KELUAR)
+  const [usageArea, setUsageArea] = useState(''); // Area Penggunaan (KELUAR)
+  const [transactionDate, setTransactionDate] = useState<string>(() => getTodayDateString());
+  const [description, setDescription] = useState(''); // Deskripsi Material
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  const selectedMaterial = useMemo(
+    () => materials.find((m) => m.id === materialId) || null,
+    [materials, materialId]
+  );
+
   useEffect(() => {
     if (isOpen) {
+      const targetMat =
+        materials.find((m) => m.id === initialMaterialId) || materials[0] || null;
       setType(initialType);
-      setMaterialId(initialMaterialId || materials[0]?.id || '');
+      setMaterialId(targetMat?.id || '');
       setMaterialSearch('');
       setQuantity(1);
       setParty('');
-      setPic('Staf Gudang');
-      setNotes('');
+      setUsageArea('');
+      setTransactionDate(getTodayDateString());
+      setDescription((targetMat as any)?.description ?? '');
       setErrorMsg('');
     }
   }, [isOpen, initialType, initialMaterialId, materials]);
+
+  // Saat pindah ke Stok Keluar atau ganti material saat Stok Keluar, tampilkan deskripsi material
+  useEffect(() => {
+    if (!isOpen) return;
+    if (type === 'KELUAR') {
+      setDescription((selectedMaterial as any)?.description ?? '');
+    }
+  }, [isOpen, type, selectedMaterial]);
 
   const filteredMaterials = useMemo(() => {
     const q = materialSearch.trim().toLowerCase();
@@ -62,26 +90,44 @@ export function TransactionModal({
     );
   }, [materials, materialSearch]);
 
-  const selectedMaterial = useMemo(
-    () => materials.find((m) => m.id === materialId) || null,
-    [materials, materialId]
-  );
-
   if (!isOpen) return null;
 
+  const safeQty = Number.isFinite(quantity) && quantity >= 0 ? quantity : 0;
+  const currentStock = selectedMaterial ? Number(selectedMaterial.currentStock) : 0;
+
+  // Proyeksi stok setelah transaksi: bisa mencapai 0 (habis), tetapi tidak boleh negatif
   const projectedStock = selectedMaterial
     ? type === 'MASUK'
-      ? selectedMaterial.currentStock + quantity
-      : selectedMaterial.currentStock - quantity
+      ? currentStock + safeQty
+      : currentStock - safeQty
+    : 0;
+
+  // Jumlah yang akan diambil / masuk pada kolom kanan
+  const takenOrAddedStock = selectedMaterial
+    ? type === 'KELUAR'
+      ? Math.max(0, Math.min(currentStock, safeQty))
+      : safeQty
     : 0;
 
   const isNegativeStock = selectedMaterial !== null && type === 'KELUAR' && projectedStock < 0;
-  const isInvalidQty = !Number.isFinite(quantity) || quantity <= 0;
+  const isInvalidQty = !Number.isFinite(quantity) || quantity < 1;
+
+  // Status stok berdasarkan proyeksi stok setelah transaksi
+  const stockStatusNote =
+    projectedStock === 1
+      ? { text: 'Perlu restock', className: 'text-[#B45309] dark:text-[#FBBF24]' }
+      : projectedStock > 1
+        ? { text: 'Stok aman', className: 'text-[#15803D] dark:text-[#4ADE80]' }
+        : { text: 'Stok habis', className: 'text-[#B91C1C] dark:text-[#F87171]' };
 
   const adjustQuantity = (delta: number) => {
     setQuantity((prev) => {
-      const next = (Number.isFinite(prev) ? prev : 0) + delta;
-      return Math.max(1, next);
+      const base = Number.isFinite(prev) ? prev : 1;
+      const maxAllowed =
+        type === 'KELUAR' && selectedMaterial
+          ? Math.max(1, selectedMaterial.currentStock)
+          : Number.POSITIVE_INFINITY;
+      return Math.min(maxAllowed, Math.max(1, base + delta));
     });
   };
 
@@ -94,19 +140,23 @@ export function TransactionModal({
       return;
     }
     if (isInvalidQty) {
-      setErrorMsg('Jumlah harus lebih besar dari 0.');
+      setErrorMsg('Jumlah minimum adalah 1.');
       return;
     }
     if (isNegativeStock) {
       setErrorMsg(
-        `Stok tidak mencukupi. Tersedia ${selectedMaterial.currentStock} ${selectedMaterial.unit}.`
+        `Stok tidak mencukupi. Tersedia ${currentStock} ${selectedMaterial.unit}.`
       );
       return;
     }
     if (!party.trim()) {
       setErrorMsg(
-        type === 'MASUK' ? 'Sumber / Supplier wajib diisi.' : 'Pemohon / Proyek wajib diisi.'
+        type === 'MASUK' ? 'Sumber wajib diisi.' : 'Nama pengambil wajib diisi.'
       );
+      return;
+    }
+    if (type === 'KELUAR' && !usageArea.trim()) {
+      setErrorMsg('Area penggunaan wajib diisi.');
       return;
     }
 
@@ -115,10 +165,12 @@ export function TransactionModal({
       await onSubmit({
         materialId: selectedMaterial.id,
         type,
-        quantity,
+        quantity: safeQty,
         party: party.trim(),
-        pic: pic.trim() || 'Staf Gudang',
-        notes: notes.trim(),
+        pic: type === 'KELUAR' ? usageArea.trim() : party.trim(),
+        notes: description.trim(),
+        transactionDate,
+        description: description.trim(),
       });
       onClose();
     } catch (err: any) {
@@ -135,7 +187,7 @@ export function TransactionModal({
       aria-modal="true"
       aria-labelledby="tx-modal-title"
     >
-      <div className="w-full sm:max-w-lg max-h-[92vh] flex flex-col rounded-t-3xl sm:rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] shadow-2xl overflow-hidden">
+      <div className="w-full sm:max-w-2xl max-h-[92vh] flex flex-col rounded-t-3xl sm:rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] shadow-2xl overflow-hidden">
         {/* Mobile drag handle */}
         <div className="sm:hidden pt-2.5 pb-1 flex justify-center">
           <div className="w-10 h-1.5 rounded-full bg-slate-300 dark:bg-gray-700" />
@@ -235,83 +287,144 @@ export function TransactionModal({
             </select>
 
             {selectedMaterial && (
-              <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[#F8FAFC] dark:bg-[#090D16] border border-[#CBD5E1] dark:border-[#374151] text-xs">
+              <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#090D16] border border-[#CBD5E1] dark:border-[#374151] text-xs">
                 <span className="inline-flex items-center gap-1 font-mono text-[#334155] dark:text-[#D1D5DB]">
                   <MapPin className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                   {selectedMaterial.location}
                 </span>
                 <span className="font-mono font-bold tabular-nums">
-                  Stok Saat Ini: {formatNumber(selectedMaterial.currentStock)}{' '}
-                  {selectedMaterial.unit}
+                  Stok Saat Ini: {formatNumber(currentStock)} {selectedMaterial.unit}
                 </span>
               </div>
             )}
           </div>
 
-          {/* Quantity + Quick Increment Buttons */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label
-                htmlFor="tx-qty"
-                className="text-xs font-bold text-[#334155] dark:text-[#D1D5DB]"
-              >
-                Jumlah ({selectedMaterial?.unit ?? 'unit'})
-              </label>
-              <button
-                type="button"
-                onClick={() => setQuantity(1)}
-                className="text-xs font-semibold text-[#1D4ED8] dark:text-[#3B82F6] hover:underline cursor-pointer"
-              >
-                Reset ke 1
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => adjustQuantity(-1)}
-                aria-label="Kurangi 1"
-                className="min-w-[48px] min-h-[48px] rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-lg font-bold hover:bg-slate-200 dark:hover:bg-gray-800 cursor-pointer"
-              >
-                -1
-              </button>
-              <input
-                id="tx-qty"
-                type="number"
-                min={1}
-                step="any"
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-                className="flex-1 min-h-[48px] px-4 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-white dark:bg-[#090D16] text-center font-mono text-xl font-extrabold tabular-nums focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
-              />
-              <button
-                type="button"
-                onClick={() => adjustQuantity(1)}
-                aria-label="Tambah 1"
-                className="min-w-[48px] min-h-[48px] rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-lg font-bold hover:bg-slate-200 dark:hover:bg-gray-800 cursor-pointer"
-              >
-                +1
-              </button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              {[1, 5, 10].map((inc) => (
-                <button
-                  key={inc}
-                  type="button"
-                  onClick={() => adjustQuantity(inc)}
-                  className="min-h-[44px] rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-sm font-bold hover:border-[#1D4ED8] dark:hover:border-[#3B82F6] transition-colors cursor-pointer"
+          {/* 3 Kolom: Kiri (Jumlah min 1 & bisa sampai habis) | Tengah (Stok Saat Ini terkunci) | Kanan (Stok yang Akan Diambil) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+            {/* Kiri: Form Jumlah (minimum 1, bisa sampai habis) */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label
+                  htmlFor="tx-qty"
+                  className="text-xs font-bold text-[#334155] dark:text-[#D1D5DB]"
                 >
-                  +{inc}
+                  Jumlah ({selectedMaterial?.unit ?? 'unit'})
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setQuantity(1)}
+                  className="text-[11px] font-semibold text-[#1D4ED8] dark:text-[#3B82F6] hover:underline cursor-pointer"
+                >
+                  Min 1
                 </button>
-              ))}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => adjustQuantity(-1)}
+                  aria-label="Kurangi 1"
+                  className="w-10 min-h-[44px] rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-base font-bold hover:bg-slate-200 dark:hover:bg-gray-800 cursor-pointer shrink-0"
+                >
+                  -
+                </button>
+                <input
+                  id="tx-qty"
+                  type="number"
+                  min={1}
+                  max={type === 'KELUAR' && selectedMaterial ? Math.max(1, currentStock) : undefined}
+                  step="any"
+                  value={quantity}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    if (!Number.isFinite(val)) {
+                      setQuantity(1);
+                      return;
+                    }
+                    if (type === 'KELUAR' && selectedMaterial) {
+                      setQuantity(Math.min(Math.max(1, currentStock), Math.max(1, val)));
+                    } else {
+                      setQuantity(Math.max(1, val));
+                    }
+                  }}
+                  className="w-full min-w-0 min-h-[44px] px-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-white dark:bg-[#090D16] text-center font-mono text-base font-extrabold tabular-nums focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
+                />
+                <button
+                  type="button"
+                  onClick={() => adjustQuantity(1)}
+                  aria-label="Tambah 1"
+                  className="w-10 min-h-[44px] rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-base font-bold hover:bg-slate-200 dark:hover:bg-gray-800 cursor-pointer shrink-0"
+                >
+                  +
+                </button>
+              </div>
+
+              {/* Tulisan kecil status stok di bawah form */}
+              <p className={`mt-1 text-[11px] font-semibold ${stockStatusNote.className}`}>
+                {stockStatusNote.text}
+              </p>
+            </div>
+
+            {/* Tengah: Form Stok Saat Ini (tetap tidak bisa diklik) */}
+            <div>
+              <label
+                htmlFor="tx-current-stock"
+                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
+              >
+                Stok Saat Ini
+              </label>
+              <input
+                id="tx-current-stock"
+                type="text"
+                disabled
+                readOnly
+                tabIndex={-1}
+                value={
+                  selectedMaterial
+                    ? `${formatNumber(currentStock)} ${selectedMaterial.unit}`
+                    : `0 ${selectedMaterial?.unit ?? 'unit'}`
+                }
+                className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-slate-100 dark:bg-gray-800/80 text-center font-mono text-sm font-bold tabular-nums opacity-75 cursor-not-allowed select-none pointer-events-none"
+              />
+            </div>
+
+            {/* Kanan: Stok yang Akan Diambil */}
+            <div>
+              <label
+                htmlFor="tx-taken-stock"
+                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
+              >
+                {type === 'KELUAR' ? 'Stok yang Akan Diambil' : 'Stok yang Akan Masuk'}
+              </label>
+              <input
+                id="tx-taken-stock"
+                type="text"
+                disabled
+                readOnly
+                tabIndex={-1}
+                value={`${formatNumber(takenOrAddedStock)} ${selectedMaterial?.unit ?? 'unit'}`}
+                className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-slate-100 dark:bg-gray-800/80 text-center font-mono text-sm font-bold tabular-nums opacity-85 cursor-not-allowed select-none pointer-events-none"
+              />
             </div>
           </div>
 
-          {/* Live Stock Projection & Negative Stock Validation */}
+          {/* Tombol cepat tambah jumlah */}
+          <div className="grid grid-cols-3 gap-2">
+            {[1, 5, 10].map((inc) => (
+              <button
+                key={inc}
+                type="button"
+                onClick={() => adjustQuantity(inc)}
+                className="min-h-[40px] rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-xs font-bold hover:border-[#1D4ED8] dark:hover:border-[#3B82F6] transition-colors cursor-pointer"
+              >
+                +{inc}
+              </button>
+            ))}
+          </div>
+
+          {/* Proyeksi Stok Akhir & Validasi Stok */}
           {selectedMaterial && (
             <div
-              className={`p-3.5 rounded-xl border flex items-center justify-between text-sm ${
+              className={`p-3 rounded-xl border flex items-center justify-between text-xs sm:text-sm ${
                 isNegativeStock
                   ? 'bg-[#FEE2E2] text-[#B91C1C] border-[#FCA5A5] dark:bg-[#7F1D1D] dark:text-[#F87171] dark:border-[#991B1B]'
                   : 'bg-[#F8FAFC] text-[#0F172A] border-[#CBD5E1] dark:bg-[#090D16] dark:text-[#F9FAFB] dark:border-[#374151]'
@@ -319,23 +432,28 @@ export function TransactionModal({
             >
               <span className="font-semibold flex items-center gap-1.5">
                 {isNegativeStock && <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />}
-                <span>{isNegativeStock ? 'Stok Tidak Cukup!' : 'Proyeksi Stok Akhir'}</span>
+                <span>
+                  {isNegativeStock
+                    ? 'Stok Tidak Cukup!'
+                    : projectedStock === 0
+                      ? 'Stok Akan Habis (0)'
+                      : 'Proyeksi Stok Akhir'}
+                </span>
               </span>
               <span className="font-mono font-bold tabular-nums">
-                {formatNumber(selectedMaterial.currentStock)} → {formatNumber(projectedStock)}{' '}
-                {selectedMaterial.unit}
+                {formatNumber(currentStock)} → {formatNumber(projectedStock)} {selectedMaterial.unit}
               </span>
             </div>
           )}
 
-          {/* Contextual Party & PIC */}
+          {/* Baris Sumber / Nama Pengambil, Area Penggunaan (Keluar), & Tanggal Material Masuk/Keluar */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label
                 htmlFor="tx-party"
                 className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
               >
-                {type === 'MASUK' ? 'Sumber / Supplier *' : 'Pemohon / Proyek *'}
+                {type === 'MASUK' ? 'Sumber *' : 'Nama Pengambil *'}
               </label>
               <input
                 id="tx-party"
@@ -343,43 +461,95 @@ export function TransactionModal({
                 required
                 value={party}
                 onChange={(e) => setParty(e.target.value)}
-                placeholder={type === 'MASUK' ? 'Contoh: PT Sinar Baja' : 'Contoh: Tim Maintenance'}
+                placeholder={type === 'MASUK' ? 'Contoh: PT Sinar Baja' : 'Contoh: Budi Santoso'}
                 className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="tx-pic"
-                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
-              >
-                Penanggung Jawab (PIC)
-              </label>
-              <input
-                id="tx-pic"
-                type="text"
-                value={pic}
-                onChange={(e) => setPic(e.target.value)}
-                placeholder="Nama staf gudang"
-                className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
-              />
-            </div>
+            {type === 'KELUAR' ? (
+              <div>
+                <label
+                  htmlFor="tx-usage-area"
+                  className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
+                >
+                  Area Penggunaan *
+                </label>
+                <input
+                  id="tx-usage-area"
+                  type="text"
+                  required
+                  value={usageArea}
+                  onChange={(e) => setUsageArea(e.target.value)}
+                  placeholder="Contoh: Line Produksi A / Area Gudang"
+                  className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
+                />
+              </div>
+            ) : (
+              <div>
+                <label
+                  htmlFor="tx-date"
+                  className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
+                >
+                  Tanggal Material Masuk *
+                </label>
+                <input
+                  id="tx-date"
+                  type="date"
+                  required
+                  value={transactionDate}
+                  onChange={(e) => setTransactionDate(e.target.value)}
+                  className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
+                />
+              </div>
+            )}
           </div>
 
+          {/* Pada Stok Keluar, Tanggal Material Keluar diletakkan di bawah / berdampingan */}
+          {type === 'KELUAR' && (
+            <div>
+              <label
+                htmlFor="tx-date-out"
+                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
+              >
+                Tanggal Material Keluar *
+              </label>
+              <input
+                id="tx-date-out"
+                type="date"
+                required
+                value={transactionDate}
+                onChange={(e) => setTransactionDate(e.target.value)}
+                className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
+              />
+            </div>
+          )}
+
+          {/* Deskripsi Material: bisa diisi pada Stok Masuk, sudah tampil pada Stok Keluar */}
           <div>
             <label
-              htmlFor="tx-notes"
+              htmlFor="tx-description"
               className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
             >
-              Catatan / No. Surat Jalan (Opsional)
+              Deskripsi Material
             </label>
             <textarea
-              id="tx-notes"
+              id="tx-description"
               rows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Contoh: PO #2026-881 atau kebutuhan perbaikan jalur A"
-              className="w-full px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
+              value={description}
+              readOnly={type === 'KELUAR'}
+              onChange={(e) => {
+                if (type === 'MASUK') setDescription(e.target.value);
+              }}
+              placeholder={
+                type === 'MASUK'
+                  ? 'Masukkan spesifikasi atau deskripsi material...'
+                  : 'Deskripsi material otomatis tampil sesuai material terpilih'
+              }
+              className={`w-full px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] text-sm focus:outline-none ${
+                type === 'KELUAR'
+                  ? 'bg-slate-100 dark:bg-gray-800/80 text-[#334155] dark:text-[#D1D5DB] cursor-default'
+                  : 'bg-[#F8FAFC] dark:bg-[#090D16] focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]'
+              }`}
             />
           </div>
 
