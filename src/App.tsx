@@ -694,6 +694,8 @@ export default function App() {
         onLogout={() => setLogoutConfirmOpen(true)}
         notifications={notifications}
         onOpenNotifications={() => handleNavigateMaterials('ALL')}
+        onDismissNotification={handleDismissNotification}
+        onClearAllNotifications={handleClearAllNotifications}
       >
         {loadError && (
           <div
@@ -710,11 +712,6 @@ export default function App() {
             </button>
           </div>
         )}
-  
-        notifications={notifications}
-        onOpenNotifications={() => handleNavigateMaterials('ALL')}
-        onDismissNotification={handleDismissNotification}
-        onClearAllNotifications={handleClearAllNotifications}
         {activeTab === 'dashboard' && (
           <DashboardView
             materials={materials}
