@@ -3,7 +3,6 @@ import { Check, X } from 'lucide-react';
 import type {
   CreateMaterialInput,
   Material,
-  MaterialCategory,
   MaterialUnit,
   UpdateMaterialInput,
 } from '../types/warehouse';
@@ -25,16 +24,7 @@ interface MaterialFormModalProps {
   ) => Promise<void>;
 }
 
-const CATEGORY_OPTIONS: MaterialCategory[] = [
-  'Elektrikal',
-  'Mekanikal',
-  'Packaging',
-  'Safety & APD',
-  'Raw Material',
-  'Consumable',
-];
-
-const UNIT_OPTIONS: MaterialUnit[] = ['pcs', 'kg', 'roll', 'box', 'meter', 'liter', 'unit'];
+const UOM_OPTIONS: MaterialUnit[] = ['pcs', 'kg', 'roll', 'box', 'meter', 'liter', 'unit'];
 
 function getTodayDateString(): string {
   const d = new Date();
@@ -51,44 +41,35 @@ export function MaterialFormModal({
   onCreate,
   onUpdate,
 }: MaterialFormModalProps) {
-  const [sku, setSku] = useState('');
+  const [qcode, setQcode] = useState('');
   const [name, setName] = useState('');
-  const [category, setCategory] = useState<MaterialCategory>('Elektrikal');
-  const [unit, setUnit] = useState<MaterialUnit>('pcs');
-  const [currentStock, setCurrentStock] = useState<number>(0);
-  const [minStock, setMinStock] = useState<number>(10);
-  const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
+  const [addedQty, setAddedQty] = useState<number>(1);
   const [entryDate, setEntryDate] = useState<string>(() => getTodayDateString());
+  const [uom, setUom] = useState<MaterialUnit>('pcs');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       if (editingMaterial) {
-        setSku(editingMaterial.sku);
+        setQcode(editingMaterial.sku);
         setName(editingMaterial.name);
-        setCategory(editingMaterial.category);
-        setUnit(editingMaterial.unit);
-        setCurrentStock(editingMaterial.currentStock);
-        setMinStock(editingMaterial.minStock);
-        setLocation(editingMaterial.location);
         setDescription((editingMaterial as any).description ?? '');
+        setAddedQty(Math.max(1, Number(editingMaterial.currentStock) || 1));
         setEntryDate(
-          (editingMaterial as any).entryDate ||
+          (editingMaterial as any).entryDate?.slice(0, 10) ||
             editingMaterial.createdAt?.slice(0, 10) ||
             getTodayDateString()
         );
+        setUom(editingMaterial.unit);
       } else {
-        setSku('');
+        setQcode('');
         setName('');
-        setCategory('Elektrikal');
-        setUnit('pcs');
-        setCurrentStock(0);
-        setMinStock(10);
-        setLocation('');
         setDescription('');
+        setAddedQty(1);
         setEntryDate(getTodayDateString());
+        setUom('pcs');
       }
       setErrorMsg('');
     }
@@ -98,37 +79,46 @@ export function MaterialFormModal({
 
   const isEdit = Boolean(editingMaterial);
 
+  const adjustAddedQty = (delta: number) => {
+    setAddedQty((prev) => {
+      const base = Number.isFinite(Number(prev)) ? Number(prev) : 1;
+      return Math.max(1, base + delta);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
-    if (!sku.trim() || !name.trim() || !location.trim()) {
-      setErrorMsg('Kode SKU, Nama Material, dan Lokasi Rak wajib diisi.');
+    if (!qcode.trim() || !name.trim()) {
+      setErrorMsg('QCODE Material dan Nama Material wajib diisi.');
       return;
     }
+
+    const qtyValue = Math.max(1, Number(addedQty) || 1);
 
     try {
       setIsSubmitting(true);
       if (editingMaterial) {
         await onUpdate(editingMaterial.id, {
-          sku: sku.trim().toUpperCase(),
+          sku: qcode.trim().toUpperCase(),
           name: name.trim(),
-          category,
-          unit,
-          minStock: Math.max(0, Number(minStock) || 0),
-          location: location.trim(),
+          category: editingMaterial.category || 'Raw Material',
+          unit: uom,
+          minStock: editingMaterial.minStock ?? 1,
+          location: editingMaterial.location || '-',
           description: description.trim(),
           entryDate,
         });
       } else {
         await onCreate({
-          sku: sku.trim().toUpperCase(),
+          sku: qcode.trim().toUpperCase(),
           name: name.trim(),
-          category,
-          unit,
-          currentStock: Math.max(0, Number(currentStock) || 0),
-          minStock: Math.max(0, Number(minStock) || 0),
-          location: location.trim(),
+          category: 'Raw Material',
+          unit: uom,
+          currentStock: qtyValue,
+          minStock: 1,
+          location: '-',
           description: description.trim(),
           entryDate,
         });
@@ -148,228 +138,212 @@ export function MaterialFormModal({
       aria-modal="true"
       aria-labelledby="mat-modal-title"
     >
+      {/* [ADJUSTMENT 1] Lebar & tinggi maksimal modal: ubah sm:max-w-lg / max-h-[92vh] */}
       <div className="w-full sm:max-w-lg max-h-[92vh] flex flex-col rounded-t-3xl sm:rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] shadow-2xl overflow-hidden">
-        <div className="sm:hidden pt-2.5 pb-1 flex justify-center">
-          <div className="w-10 h-1.5 rounded-full bg-slate-300 dark:bg-gray-700" />
+        <div className="sm:hidden pt-2 pb-1 flex justify-center">
+          <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-gray-700" />
         </div>
 
-        <div className="px-5 py-3.5 border-b border-[#CBD5E1] dark:border-[#374151] flex items-center justify-between gap-4">
-          <h2 id="mat-modal-title" className="font-display text-lg font-bold">
+        <div className="px-5 py-3 border-b border-[#CBD5E1] dark:border-[#374151] flex items-center justify-between gap-3">
+          <h2 id="mat-modal-title" className="font-display text-base font-bold">
             {isEdit ? 'Edit Master Material' : 'Tambah Material Baru'}
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Tutup modal"
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[#334155] dark:text-[#D1D5DB] hover:bg-slate-100 dark:hover:bg-gray-800 cursor-pointer"
+            className="w-9 h-9 flex items-center justify-center rounded-xl text-[#334155] dark:text-[#D1D5DB] hover:bg-slate-100 dark:hover:bg-gray-800 cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5">
+          {/* 1. QCODE Material & 2. Nama Material */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label
-                htmlFor="mat-sku"
-                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
+                htmlFor="mat-qcode"
+                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1"
               >
-                Kode / SKU *
+                QCODE Material *
               </label>
+              {/* [ADJUSTMENT 2] Tinggi input QCODE: ubah min-h-[40px] & text-sm */}
               <input
-                id="mat-sku"
+                id="mat-qcode"
                 type="text"
                 required
-                value={sku}
-                onChange={(e) => setSku(e.target.value.toUpperCase())}
-                placeholder="ELK-KBL-01"
-                className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-sm uppercase focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
+                value={qcode}
+                onChange={(e) => setQcode(e.target.value.toUpperCase())}
+                placeholder="Contoh: QC-001"
+                className="w-full min-h-[40px] px-3 py-1.5 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-sm uppercase focus:outline-none focus:ring-2 focus:ring-[#15803D]"
               />
             </div>
 
             <div>
               <label
-                htmlFor="mat-location"
-                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
+                htmlFor="mat-name"
+                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1"
               >
-                Lokasi Rak *
+                Nama Material *
               </label>
+              {/* [ADJUSTMENT 2] Tinggi input Nama Material: ubah min-h-[40px] & text-sm */}
               <input
-                id="mat-location"
+                id="mat-name"
                 type="text"
                 required
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Rak A1-04"
-                className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Contoh: Kabel NYM 3x2.5mm"
+                className="w-full min-h-[40px] px-3 py-1.5 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#15803D]"
               />
             </div>
           </div>
 
-          <div>
-            <label
-              htmlFor="mat-name"
-              className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
-            >
-              Nama Material *
-            </label>
-            <input
-              id="mat-name"
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Contoh: Kabel NYM 3x2.5mm Eterna"
-              className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label
-                htmlFor="mat-category"
-                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
-              >
-                Kategori
-              </label>
-              <select
-                id="mat-category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value as MaterialCategory)}
-                className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
-              >
-                {CATEGORY_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="mat-unit"
-                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
-              >
-                Satuan
-              </label>
-              <select
-                id="mat-unit"
-                value={unit}
-                onChange={(e) => setUnit(e.target.value as MaterialUnit)}
-                className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
-              >
-                {UNIT_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label
-                htmlFor="mat-stock"
-                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
-              >
-                {isEdit ? 'Stok Saat Ini (Terkunci)' : 'Stok Awal'}
-              </label>
-              <input
-                id="mat-stock"
-                type="number"
-                min={0}
-                disabled={isEdit}
-                value={currentStock}
-                onChange={(e) => setCurrentStock(Number(e.target.value))}
-                className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-sm font-bold tabular-nums disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
-              />
-              {isEdit && (
-                <p className="mt-1 text-[11px] text-[#334155] dark:text-[#D1D5DB]">
-                  Ubah stok melalui menu Stok Masuk / Keluar.
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="mat-min"
-                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
-              >
-                Batas Minimum (Min. Stock)
-              </label>
-              <input
-                id="mat-min"
-                type="number"
-                min={0}
-                value={minStock}
-                onChange={(e) => setMinStock(Number(e.target.value))}
-                className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-sm font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
-              />
-            </div>
-          </div>
-
-          {/* Tanggal Material Masuk */}
-          <div>
-            <label
-              htmlFor="mat-entry-date"
-              className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
-            >
-              Tanggal Material Masuk
-            </label>
-            <input
-              id="mat-entry-date"
-              type="date"
-              value={entryDate}
-              onChange={(e) => setEntryDate(e.target.value)}
-              className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
-            />
-          </div>
-
-          {/* Deskripsi Material */}
+          {/* 3. Deskripsi Material */}
           <div>
             <label
               htmlFor="mat-description"
-              className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
+              className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1"
             >
               Deskripsi Material
             </label>
+            {/* [ADJUSTMENT 3] Tinggi area Deskripsi: ubah rows={2} & text-sm */}
             <textarea
               id="mat-description"
               rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Contoh: Kabel tembaga isolasi PVC, panjang 100m/roll"
-              className="w-full px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
+              placeholder="Tuliskan spesifikasi atau deskripsi material..."
+              className="w-full px-3 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#15803D]"
             />
+          </div>
+
+          {/* 4. Tombol tambah material (kontrol jumlah) */}
+          {!isEdit && (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label
+                  htmlFor="mat-added-qty"
+                  className="text-xs font-bold text-[#334155] dark:text-[#D1D5DB]"
+                >
+                  Tambah Material
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setAddedQty(1)}
+                  className="text-[11px] font-semibold text-[#15803D] dark:text-[#4ADE80] hover:underline cursor-pointer"
+                >
+                  Reset ke 1
+                </button>
+              </div>
+              {/* [ADJUSTMENT 4] Ukuran tombol +/- & input jumlah: ubah h-9 / text-sm */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => adjustAddedQty(-1)}
+                  aria-label="Kurangi 1"
+                  className="w-9 h-9 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-sm font-bold hover:bg-slate-200 dark:hover:bg-gray-800 cursor-pointer shrink-0"
+                >
+                  -
+                </button>
+                <input
+                  id="mat-added-qty"
+                  type="number"
+                  min={1}
+                  step="any"
+                  value={addedQty}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setAddedQty(Number.isFinite(val) ? Math.max(1, val) : 1);
+                  }}
+                  className="flex-1 h-9 px-3 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-white dark:bg-[#090D16] text-center font-mono text-sm font-extrabold tabular-nums focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+                />
+                <button
+                  type="button"
+                  onClick={() => adjustAddedQty(1)}
+                  aria-label="Tambah 1"
+                  className="w-9 h-9 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-sm font-bold hover:bg-slate-200 dark:hover:bg-gray-800 cursor-pointer shrink-0"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 5. Tanggal Material masuk & 6. Unit of Measure (UoM) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor="mat-entry-date"
+                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1"
+              >
+                Tanggal Material Masuk
+              </label>
+              {/* [ADJUSTMENT 2] Tinggi input Tanggal: ubah min-h-[40px] & text-sm */}
+              <input
+                id="mat-entry-date"
+                type="date"
+                value={entryDate}
+                onChange={(e) => setEntryDate(e.target.value)}
+                className="w-full min-h-[40px] px-3 py-1.5 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="mat-uom"
+                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1"
+              >
+                Unit of Measure (UoM)
+              </label>
+              {/* [ADJUSTMENT 2] Tinggi select UoM: ubah min-h-[40px] & text-sm */}
+              <select
+                id="mat-uom"
+                value={uom}
+                onChange={(e) => setUom(e.target.value as MaterialUnit)}
+                className="w-full min-h-[40px] px-3 py-1.5 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+              >
+                {UOM_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {errorMsg && (
             <div
               role="alert"
-              className="p-3 rounded-xl text-xs font-bold bg-[#FEE2E2] text-[#B91C1C] border border-[#FCA5A5] dark:bg-[#7F1D1D] dark:text-[#F87171] dark:border-[#991B1B]"
+              className="p-2.5 rounded-xl text-xs font-bold bg-[#FEE2E2] text-[#B91C1C] border border-[#FCA5A5] dark:bg-[#7F1D1D] dark:text-[#F87171] dark:border-[#991B1B]"
             >
               {errorMsg}
             </div>
           )}
 
-          <div className="pt-2 flex items-center gap-3">
+          {/* Tombol Input Material (Hijau) */}
+          <div className="pt-1 flex items-center gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="min-h-[48px] px-5 rounded-xl text-sm font-bold border border-[#CBD5E1] dark:border-[#374151] hover:bg-slate-100 dark:hover:bg-gray-800 cursor-pointer"
+              className="min-h-[42px] px-4 rounded-xl text-sm font-bold border border-[#CBD5E1] dark:border-[#374151] hover:bg-slate-100 dark:hover:bg-gray-800 cursor-pointer"
             >
               Batal
             </button>
+            {/* [ADJUSTMENT 5] Ukuran tombol hijau Input Material: ubah min-h-[42px] px-4 text-sm */}
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 inline-flex items-center justify-center gap-2 min-h-[48px] px-5 rounded-xl text-sm font-bold bg-[#1D4ED8] text-white hover:bg-blue-800 dark:bg-[#3B82F6] dark:text-[#090D16] dark:hover:bg-blue-400 transition-colors disabled:opacity-50 cursor-pointer"
+              className="flex-1 inline-flex items-center justify-center gap-2 min-h-[42px] px-4 rounded-xl text-sm font-bold bg-[#15803D] text-white hover:bg-green-800 dark:bg-[#16A34A] dark:text-white dark:hover:bg-green-700 transition-colors disabled:opacity-50 cursor-pointer"
             >
               <Check className="w-4 h-4 shrink-0" aria-hidden="true" />
               <span>
-                {isSubmitting ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Simpan Material'}
+                {isSubmitting
+                  ? 'Menyimpan...'
+                  : isEdit
+                    ? 'Simpan Perubahan'
+                    : 'Input Material'}
               </span>
             </button>
           </div>

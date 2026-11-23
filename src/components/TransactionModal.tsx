@@ -248,7 +248,7 @@ export function TransactionModal({
                   );
                   if (firstMatch) setMaterialId(firstMatch.id);
                 }}
-                placeholder="Ketik SKU atau nama material untuk cari cepat..."
+                placeholder="Ketik QCODE atau nama material untuk cari cepat..."
                 className="w-full min-h-[44px] pl-9 pr-3 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
               />
             </div>

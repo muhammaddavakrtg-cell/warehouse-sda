@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Activity,
   AlertTriangle,
@@ -6,6 +7,8 @@ import {
   ArrowUpRight,
   Boxes,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   MapPin,
   PackageCheck,
   XOctagon,
@@ -39,6 +42,9 @@ export function DashboardView({
   onNavigateMaterials,
   onNavigateLogbook,
 }: DashboardViewProps) {
+  const [criticalOpen, setCriticalOpen] = useState(true);
+  const [recentLogsOpen, setRecentLogsOpen] = useState(true);
+
   const totalMaterials = materials.length;
   const lowStockItems = materials.filter(
     (m) => getStockStatus(m.currentStock, m.minStock) === 'MENIPIS'
@@ -172,20 +178,36 @@ export function DashboardView({
       </section>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+        {/* Kolom Kiri: Sistem Buka Tutup Material Kritis & Aktivitas Terbaru */}
         <div className="xl:col-span-9 space-y-6">
           <section
             aria-label="Material Kritis"
             className="rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] overflow-hidden"
           >
-            <div className="px-5 py-4 border-b border-[#CBD5E1] dark:border-[#374151] flex items-center justify-between gap-4">
-              <div>
-                <h2 className="font-display text-base sm:text-lg font-bold">
-                  Daftar Material Kritis
-                </h2>
-                <p className="text-xs text-[#334155] dark:text-[#D1D5DB] mt-0.5">
-                  Prioritas restock untuk item habis dan di bawah batas minimum
-                </p>
-              </div>
+            <div className="px-5 py-4 border-b border-[#CBD5E1] dark:border-[#374151] flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setCriticalOpen((prev) => !prev)}
+                aria-expanded={criticalOpen}
+                className="flex-1 flex items-center justify-between gap-3 text-left cursor-pointer group"
+              >
+                <div>
+                  <h2 className="font-display text-base sm:text-lg font-bold group-hover:text-[#1D4ED8] dark:group-hover:text-[#3B82F6] transition-colors">
+                    Daftar Material Kritis ({formatNumber(criticalItems.length)})
+                  </h2>
+                  <p className="text-xs text-[#334155] dark:text-[#D1D5DB] mt-0.5">
+                    Prioritas restock untuk item habis dan di bawah batas minimum
+                  </p>
+                </div>
+                <span className="w-8 h-8 rounded-lg border border-[#CBD5E1] dark:border-[#374151] flex items-center justify-center shrink-0">
+                  {criticalOpen ? (
+                    <ChevronUp className="w-4 h-4" aria-hidden="true" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" aria-hidden="true" />
+                  )}
+                </span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => onNavigateMaterials('MENIPIS')}
@@ -196,71 +218,77 @@ export function DashboardView({
               </button>
             </div>
 
-            {criticalItems.length === 0 ? (
-              <div className="p-8 text-center">
-                <div className="w-12 h-12 mx-auto rounded-2xl bg-[#DCFCE7] text-[#15803D] dark:bg-[#14532D] dark:text-[#4ADE80] flex items-center justify-center">
-                  <PackageCheck className="w-6 h-6" aria-hidden="true" />
-                </div>
-                <p className="mt-3 font-display font-bold text-base">Semua Stok Dalam Kondisi Aman</p>
-                <p className="mt-1 text-sm text-[#334155] dark:text-[#D1D5DB]">
-                  Tidak ada material yang habis atau berada di bawah batas minimum saat ini.
-                </p>
-              </div>
-            ) : (
-              <div className="divide-y divide-[#CBD5E1] dark:divide-[#374151]">
-                {criticalItems.map((item) => {
-                  const status = getStockStatus(item.currentStock, item.minStock);
-                  return (
-                    <div
-                      key={item.id}
-                      className="p-4 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-gray-800/50 transition-colors"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-xs font-semibold text-[#334155] dark:text-[#D1D5DB]">
-                            {item.sku}
-                          </span>
-                          <span aria-hidden="true" className="text-[#CBD5E1] dark:text-[#374151]">
-                            ·
-                          </span>
-                          <span className="text-xs text-[#334155] dark:text-[#D1D5DB] inline-flex items-center gap-1">
-                            <MapPin className="w-3 h-3 shrink-0" aria-hidden="true" />
-                            <span className="font-mono">{item.location}</span>
-                          </span>
-                          <span aria-hidden="true" className="text-[#CBD5E1] dark:text-[#374151]">
-                            ·
-                          </span>
-                          <span className="text-xs text-[#334155] dark:text-[#D1D5DB]">
-                            {item.category}
-                          </span>
-                        </div>
-                        <p className="mt-1 font-semibold text-sm sm:text-base truncate">
-                          {item.name}
-                        </p>
-                        <div className="mt-2 flex items-center gap-3 flex-wrap">
-                          <StockStatusBadge status={status} />
-                          <span className="text-xs sm:text-sm font-medium tabular-nums text-[#334155] dark:text-[#D1D5DB]">
-                            Tersedia:{' '}
-                            <strong className="text-[#0F172A] dark:text-[#F9FAFB]">
-                              {formatNumber(item.currentStock)} {item.unit}
-                            </strong>{' '}
-                            / Min. {formatNumber(item.minStock)} {item.unit}
-                          </span>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => onQuickTransaction('MASUK', item.id)}
-                        className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-[#1D4ED8] text-white hover:bg-blue-800 dark:bg-[#3B82F6] dark:text-[#090D16] dark:hover:bg-blue-400 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-                      >
-                        <ArrowDownLeft className="w-4 h-4 shrink-0" aria-hidden="true" />
-                        <span>Restock</span>
-                      </button>
+            {criticalOpen && (
+              <>
+                {criticalItems.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <div className="w-12 h-12 mx-auto rounded-2xl bg-[#DCFCE7] text-[#15803D] dark:bg-[#14532D] dark:text-[#4ADE80] flex items-center justify-center">
+                      <PackageCheck className="w-6 h-6" aria-hidden="true" />
                     </div>
-                  );
-                })}
-              </div>
+                    <p className="mt-3 font-display font-bold text-base">
+                      Semua Stok Dalam Kondisi Aman
+                    </p>
+                    <p className="mt-1 text-sm text-[#334155] dark:text-[#D1D5DB]">
+                      Tidak ada material yang habis atau berada di bawah batas minimum saat ini.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-[#CBD5E1] dark:divide-[#374151]">
+                    {criticalItems.map((item) => {
+                      const status = getStockStatus(item.currentStock, item.minStock);
+                      return (
+                        <div
+                          key={item.id}
+                          className="p-4 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-gray-800/50 transition-colors"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-mono text-xs font-semibold text-[#334155] dark:text-[#D1D5DB]">
+                                {item.sku}
+                              </span>
+                              <span aria-hidden="true" className="text-[#CBD5E1] dark:text-[#374151]">
+                                ·
+                              </span>
+                              <span className="text-xs text-[#334155] dark:text-[#D1D5DB] inline-flex items-center gap-1">
+                                <MapPin className="w-3 h-3 shrink-0" aria-hidden="true" />
+                                <span className="font-mono">{item.location}</span>
+                              </span>
+                              <span aria-hidden="true" className="text-[#CBD5E1] dark:text-[#374151]">
+                                ·
+                              </span>
+                              <span className="text-xs text-[#334155] dark:text-[#D1D5DB]">
+                                {item.category}
+                              </span>
+                            </div>
+                            <p className="mt-1 font-semibold text-sm sm:text-base truncate">
+                              {item.name}
+                            </p>
+                            <div className="mt-2 flex items-center gap-3 flex-wrap">
+                              <StockStatusBadge status={status} />
+                              <span className="text-xs sm:text-sm font-medium tabular-nums text-[#334155] dark:text-[#D1D5DB]">
+                                Tersedia:{' '}
+                                <strong className="text-[#0F172A] dark:text-[#F9FAFB]">
+                                  {formatNumber(item.currentStock)} {item.unit}
+                                </strong>{' '}
+                                / Min. {formatNumber(item.minStock)} {item.unit}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => onQuickTransaction('MASUK', item.id)}
+                            className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-[#1D4ED8] text-white hover:bg-blue-800 dark:bg-[#3B82F6] dark:text-[#090D16] dark:hover:bg-blue-400 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                          >
+                            <ArrowDownLeft className="w-4 h-4 shrink-0" aria-hidden="true" />
+                            <span>Restock</span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </section>
 
@@ -268,13 +296,30 @@ export function DashboardView({
             aria-label="Aktivitas Terbaru"
             className="rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] overflow-hidden"
           >
-            <div className="px-5 py-4 border-b border-[#CBD5E1] dark:border-[#374151] flex items-center justify-between gap-4">
-              <div>
-                <h2 className="font-display text-base sm:text-lg font-bold">Aktivitas Terbaru</h2>
-                <p className="text-xs text-[#334155] dark:text-[#D1D5DB] mt-0.5">
-                  6 pergerakan stok terakhir di gudang
-                </p>
-              </div>
+            <div className="px-5 py-4 border-b border-[#CBD5E1] dark:border-[#374151] flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setRecentLogsOpen((prev) => !prev)}
+                aria-expanded={recentLogsOpen}
+                className="flex-1 flex items-center justify-between gap-3 text-left cursor-pointer group"
+              >
+                <div>
+                  <h2 className="font-display text-base sm:text-lg font-bold group-hover:text-[#1D4ED8] dark:group-hover:text-[#3B82F6] transition-colors">
+                    Aktivitas Terbaru ({formatNumber(recentLogs.length)})
+                  </h2>
+                  <p className="text-xs text-[#334155] dark:text-[#D1D5DB] mt-0.5">
+                    6 pergerakan stok terakhir di gudang
+                  </p>
+                </div>
+                <span className="w-8 h-8 rounded-lg border border-[#CBD5E1] dark:border-[#374151] flex items-center justify-center shrink-0">
+                  {recentLogsOpen ? (
+                    <ChevronUp className="w-4 h-4" aria-hidden="true" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" aria-hidden="true" />
+                  )}
+                </span>
+              </button>
+
               <button
                 type="button"
                 onClick={onNavigateLogbook}
@@ -285,48 +330,52 @@ export function DashboardView({
               </button>
             </div>
 
-            {recentLogs.length === 0 ? (
-              <div className="p-8 text-center text-sm text-[#334155] dark:text-[#D1D5DB]">
-                <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-60" aria-hidden="true" />
-                Belum ada aktivitas transaksi tercatat.
-              </div>
-            ) : (
-              <div className="divide-y divide-[#CBD5E1] dark:divide-[#374151]">
-                {recentLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="p-4 flex items-start justify-between gap-3 hover:bg-slate-50 dark:hover:bg-gray-800/50 transition-colors"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <TransactionBadge type={log.type} />
-                        <span className="font-mono text-xs tabular-nums text-[#334155] dark:text-[#D1D5DB]">
-                          {formatShortTime(log.createdAt)}
-                        </span>
-                      </div>
-                      <p className="mt-1.5 font-semibold text-sm truncate">{log.materialName}</p>
-                      <p className="mt-0.5 text-xs text-[#334155] dark:text-[#D1D5DB] truncate">
-                        {log.party} · {log.pic}
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p
-                        className={`font-mono text-sm font-bold tabular-nums ${
-                          log.type === 'MASUK'
-                            ? 'text-[#15803D] dark:text-[#4ADE80]'
-                            : 'text-[#C2410C] dark:text-[#FB923C]'
-                        }`}
-                      >
-                        {log.type === 'MASUK' ? '+' : '-'}
-                        {formatNumber(log.quantity)} {log.materialUnit}
-                      </p>
-                      <p className="mt-0.5 font-mono text-xs tabular-nums text-[#334155] dark:text-[#D1D5DB]">
-                        {formatNumber(log.stockBefore)} → {formatNumber(log.stockAfter)}
-                      </p>
-                    </div>
+            {recentLogsOpen && (
+              <>
+                {recentLogs.length === 0 ? (
+                  <div className="p-8 text-center text-sm text-[#334155] dark:text-[#D1D5DB]">
+                    <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-60" aria-hidden="true" />
+                    Belum ada aktivitas transaksi tercatat.
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <div className="divide-y divide-[#CBD5E1] dark:divide-[#374151]">
+                    {recentLogs.map((log) => (
+                      <div
+                        key={log.id}
+                        className="p-4 flex items-start justify-between gap-3 hover:bg-slate-50 dark:hover:bg-gray-800/50 transition-colors"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <TransactionBadge type={log.type} />
+                            <span className="font-mono text-xs tabular-nums text-[#334155] dark:text-[#D1D5DB]">
+                              {formatShortTime(log.createdAt)}
+                            </span>
+                          </div>
+                          <p className="mt-1.5 font-semibold text-sm truncate">{log.materialName}</p>
+                          <p className="mt-0.5 text-xs text-[#334155] dark:text-[#D1D5DB] truncate">
+                            {log.party} · {log.pic}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p
+                            className={`font-mono text-sm font-bold tabular-nums ${
+                              log.type === 'MASUK'
+                                ? 'text-[#15803D] dark:text-[#4ADE80]'
+                                : 'text-[#C2410C] dark:text-[#FB923C]'
+                            }`}
+                          >
+                            {log.type === 'MASUK' ? '+' : '-'}
+                            {formatNumber(log.quantity)} {log.materialUnit}
+                          </p>
+                          <p className="mt-0.5 font-mono text-xs tabular-nums text-[#334155] dark:text-[#D1D5DB]">
+                            {formatNumber(log.stockBefore)} → {formatNumber(log.stockAfter)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </section>
         </div>
