@@ -20,7 +20,6 @@ import {
   isToday,
   sortMaterialsByUrgency,
 } from '../utils/warehouse';
-import { ClockCalendarCard } from './ClockCalendarCard';
 import { StockStatusBadge, TransactionBadge } from './StatusBadge';
 
 interface DashboardViewProps {
@@ -157,8 +156,8 @@ export function DashboardView({
         </button>
       </section>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-        <div className="xl:col-span-9 space-y-6">
+      <div className="space-y-6">
+       <div className="space-y-6">
           <section
             aria-label="Material Kritis"
             className="rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] overflow-hidden"
@@ -359,9 +358,7 @@ export function DashboardView({
           </section>
         </div>
 
-        <div className="xl:col-span-3">
-          <ClockCalendarCard />
-        </div>
+        
       </div>
     </div>
   );

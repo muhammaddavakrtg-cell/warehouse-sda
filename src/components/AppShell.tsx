@@ -1,3 +1,20 @@
+import { useState, type ReactNode } from 'react';
+import {
+  ArrowUpRight,
+  Boxes,
+  CalendarDays,
+  ClipboardList,
+  History,
+  LayoutDashboard,
+  LogOut,
+  Plus,
+  UserRound,
+  Users,
+} from 'lucide-react';
+import type { TransactionType } from '../types/warehouse';
+import { ClockCalendarCard } from './ClockCalendarCard';
+import { NotificationBell, type NotificationItem } from './NotificationBell';
+import { ThemeToggle } from './ThemeToggle';
 import type { ReactNode } from 'react';
 import {
   ArrowUpRight,
@@ -63,6 +80,7 @@ export function AppShell({
   const currentTitle = NAV_ITEMS.find((n) => n.id === activeTab)?.label ?? 'Dashboard';
   const labelCls = canManageUsers ? 'text-[10px]' : 'text-[11px]';
   const userInitial = (userName || 'U').charAt(0).toUpperCase();
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const handleLogoutClick = () => {
     if (!onLogout) return;
@@ -163,13 +181,32 @@ export function AppShell({
       <header className="lg:hidden sticky top-0 z-30 h-[52px] px-4 flex items-center justify-between bg-white/95 dark:bg-[#111827]/95 backdrop-blur-md border-b border-[#CBD5E1] dark:border-[#374151]">
         <div className="flex items-center gap-2.5 min-w-0">
           <img
-            src="/logo.png"
+            src="public/logo.png"
             alt="Logo Perusahaan"
             className="w-8 h-8 rounded-lg object-contain shrink-0"
           />
           <span className="font-display font-bold text-base truncate">{currentTitle}</span>
           {activeTab === 'dashboard' && (
-            <NotificationBell items={notifications} onViewAll={onOpenNotifications} />
+            <NotificationBell items={notifications} onViewAll={onOpenNotifications} /> {activeTab === 'dashboard' && (
+            <div className="relative flex items-center gap-1.5">
+              <NotificationBell items={notifications} onViewAll={onOpenNotifications} />
+              <button
+                type="button"
+                onClick={() => setCalendarOpen((prev) => !prev)}
+                aria-label="Buka Kalender"
+                title="Jam & Kalender"
+                className="w-9 h-9 rounded-xl border border-[#CBD5E1] dark:border-[#374151] flex items-center justify-center text-[#334155] dark:text-[#D1D5DB] hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+              >
+                <CalendarDays className="w-4 h-4" aria-hidden="true" />
+              </button>
+
+              {calendarOpen && (
+                <div className="absolute left-0 top-11 z-50 w-72 shadow-2xl">
+                  <ClockCalendarCard />
+                </div>
+              )}
+            </div>
+          )}
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
