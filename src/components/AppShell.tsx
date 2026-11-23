@@ -62,12 +62,8 @@ export function AppShell({
   onLogout,
   notifications = [],
   onOpenNotifications,
-  <NotificationBell
-  items={notifications}
-  onViewAll={onOpenNotifications}
-  onDismissNotification={onDismissNotification}
-  onClearAllNotifications={onClearAllNotifications}
-/>
+  onDismissNotification,
+  onClearAllNotifications,
   children,
 }: AppShellProps) {
   const visibleNavItems = NAV_ITEMS.filter(
@@ -121,35 +117,35 @@ export function AppShell({
             </h1>
 
             <div className="relative flex items-center gap-1.5 shrink-0">
-          <NotificationBell
-            items={notifications}
-            onViewAll={onOpenNotifications}
-            onDismissNotification={onDismissNotification}
-            onClearAllNotifications={onClearAllNotifications}
-          />
+              <NotificationBell
+                items={notifications}
+                onViewAll={onOpenNotifications}
+                onDismissNotification={onDismissNotification}
+                onClearAllNotifications={onClearAllNotifications}
+              />
 
-          {activeTab === 'dashboard' && (
-            <>
-              <button
-                type="button"
-                onClick={() => setCalendarOpen((prev) => !prev)}
-                aria-label="Buka Kalender"
-                title="Jam & Kalender"
-                className="hidden lg:flex w-9 h-9 rounded-xl border border-[#CBD5E1] dark:border-[#374151] items-center justify-center text-[#334155] dark:text-[#D1D5DB] hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-              >
-                <CalendarDays className="w-4 h-4" aria-hidden="true" />
-              </button>
+              {activeTab === 'dashboard' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setCalendarOpen((prev) => !prev)}
+                    aria-label="Buka Kalender"
+                    title="Jam & Kalender"
+                    className="hidden lg:flex w-9 h-9 rounded-xl border border-[#CBD5E1] dark:border-[#374151] items-center justify-center text-[#334155] dark:text-[#D1D5DB] hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                  >
+                    <CalendarDays className="w-4 h-4" aria-hidden="true" />
+                  </button>
 
-              {calendarOpen && (
-                <div className="hidden lg:block absolute left-0 top-11 z-50 w-72 shadow-2xl">
-                  <ClockCalendarCard />
-                </div>
+                  {calendarOpen && (
+                    <div className="hidden lg:block absolute left-0 top-11 z-50 w-72 shadow-2xl">
+                      <ClockCalendarCard />
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </div>
+            </div>
+          </div>
 
-          {/* Tombol Catat Transaksi hanya di Desktop Header (di Mobile dipindah ke dalam menu garis 3) */}
           <div className="hidden lg:flex items-center gap-3 shrink-0">
             <button
               type="button"
@@ -240,7 +236,7 @@ export function AppShell({
         </div>
       </aside>
 
-      {/* Mobile Left Drawer (Menu Garis 3: Navigasi + Catat + Kalender + Mode Gelap/Terang + Logout) */}
+      {/* Mobile Left Drawer (Menu Garis 3) */}
       {mobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div
@@ -266,7 +262,6 @@ export function AppShell({
               </button>
             </div>
 
-            {/* Tombol Catat Transaksi & Kalender di dalam Drawer Mobile */}
             <div className="px-3 pt-3 pb-2 space-y-2 border-b border-[#CBD5E1] dark:border-[#374151] shrink-0">
               <button
                 type="button"
@@ -301,7 +296,6 @@ export function AppShell({
               )}
             </div>
 
-            {/* Daftar Menu Navigasi */}
             <nav className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto" aria-label="Menu Mobile">
               {visibleNavItems.map((item) => {
                 const Icon = item.icon;
@@ -352,7 +346,6 @@ export function AppShell({
               })}
             </nav>
 
-            {/* Footer Drawer: Profil User, Mode Gelap/Terang, & Tombol Keluar */}
             <div className="p-4 border-t border-[#CBD5E1] dark:border-[#374151] space-y-3 shrink-0">
               {userName && (
                 <div className="flex items-center gap-3">
