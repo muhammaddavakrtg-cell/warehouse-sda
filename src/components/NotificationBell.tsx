@@ -166,4 +166,6 @@ export function NotificationBell({
               </button>
             </div>
           )}
-        </div>
+    </div>
+  );
+}
