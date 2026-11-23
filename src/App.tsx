@@ -346,21 +346,19 @@ export default function App() {
         );
       }
 
-      const newId = `mat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       const { data, error } = await supabase
-        .from('materials')
-        .insert({
-          id: newId,
-          sku: input.sku.trim(),
-          name: input.name.trim(),
-          category: input.category.trim(),
-          unit: input.unit.trim(),
-          current_stock: Number(input.currentStock ?? 0),
-          description: input.description?.trim() || '',
-          min_stock: Number(input.minStock ?? 0),
-        })
-        .select()
-        .single();
+  .from('materials')
+  .insert({
+    sku: input.sku.trim(),
+    name: input.name.trim(),
+    category: input.category.trim(),
+    unit: input.unit.trim(),
+    current_stock: Number(input.currentStock ?? 0),
+    description: input.description?.trim() || '',
+    min_stock: Number(input.minStock ?? 0),
+  })
+  .select()
+  .single();
 
       if (error) {
         throw new Error(error.message || 'Gagal menambahkan material.');
@@ -457,26 +455,24 @@ export default function App() {
             session?.user?.email?.split('@')[0] ||
             'Staf Gudang';
       const descriptionValue = payload.description?.trim() || payload.notes?.trim() || '';
-      const logId = `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
       const { data: logRow, error: logErr } = await supabase
-        .from('stock_logs')
-        .insert({
-          id: logId,
-          material_id: target.id,
-          material_sku: target.sku,
-          material_name: target.name,
-          material_unit: target.unit,
-          type: payload.type,
-          quantity: qty,
-          stock_before: stockBefore,
-          stock_after: stockAfter,
-          party: partyValue,
-          pic: picValue,
-          notes: descriptionValue,
-        })
-        .select()
-        .single();
+  .from('stock_logs')
+  .insert({
+    material_id: target.id,
+    material_sku: target.sku,
+    material_name: target.name,
+    material_unit: target.unit,
+    type: payload.type,
+    quantity: qty,
+    stock_before: stockBefore,
+    stock_after: stockAfter,
+    party: partyValue,
+    pic: picValue,
+    notes: descriptionValue,
+  })
+  .select()
+  .single();
 
       if (logErr) {
         throw new Error(logErr.message || 'Gagal mencatat logbook transaksi.');
