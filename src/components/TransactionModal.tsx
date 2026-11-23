@@ -43,10 +43,10 @@ export function TransactionModal({
   const [materialId, setMaterialId] = useState<string>(initialMaterialId || '');
   const [materialSearch, setMaterialSearch] = useState('');
   const [quantity, setQuantity] = useState<number>(1);
-  const [party, setParty] = useState(''); // Nama Pengambil (KELUAR)
-  const [usageArea, setUsageArea] = useState(''); // Area Penggunaan (KELUAR)
+  const [party, setParty] = useState('');
+  const [usageArea, setUsageArea] = useState('');
   const [transactionDate, setTransactionDate] = useState<string>(() => getTodayDateString());
-  const [description, setDescription] = useState(''); // Deskripsi Material
+  const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -92,35 +92,33 @@ export function TransactionModal({
   if (!isOpen) return null;
 
   const unitLabel = selectedMaterial?.unit ?? 'unit';
-  const safeQty = Number.isFinite(quantity) && quantity >= 1 ? quantity : 1;
-  const currentStock = selectedMaterial ? Number(selectedMaterial.currentStock) : 0;
+  const rawQty = Number(quantity);
+  const safeQty = Number.isFinite(rawQty) && rawQty >= 1 ? rawQty : 1;
+  const currentStock = selectedMaterial ? Number(selectedMaterial.currentStock ?? 0) : 0;
 
-  // Proyeksi stok setelah transaksi: bisa mencapai 0 (habis), tetapi tidak boleh negatif
-  const projectedStock = selectedMaterial
-    ? type === 'MASUK'
-      ? currentStock + safeQty
-      : currentStock - safeQty
-    : 0;
+  // Nilai aktual hasil penambahan (MASUK) atau pengurangan (KELUAR) dari stok saat ini dan jumlah
+  const actualStockValue =
+    type === 'MASUK' ? currentStock + safeQty : currentStock - safeQty;
 
-  const isNegativeStock = selectedMaterial !== null && type === 'KELUAR' && projectedStock < 0;
-  const isInvalidQty = !Number.isFinite(quantity) || quantity < 1;
+  const isNegativeStock = selectedMaterial !== null && type === 'KELUAR' && actualStockValue < 0;
+  const isInvalidQty = !Number.isFinite(rawQty) || rawQty < 1;
 
-  // Status stok berdasarkan proyeksi stok setelah transaksi
   const stockStatusNote =
-    projectedStock === 1
+    actualStockValue === 1
       ? { text: 'Perlu restock', className: 'text-[#B45309] dark:text-[#FBBF24]' }
-      : projectedStock > 1
+      : actualStockValue > 1
         ? { text: 'Stok aman', className: 'text-[#15803D] dark:text-[#4ADE80]' }
         : { text: 'Stok habis', className: 'text-[#B91C1C] dark:text-[#F87171]' };
 
   const adjustQuantity = (delta: number) => {
     setQuantity((prev) => {
-      const base = Number.isFinite(prev) ? prev : 1;
-      const maxAllowed =
-        type === 'KELUAR' && selectedMaterial
-          ? Math.max(1, selectedMaterial.currentStock)
-          : Number.POSITIVE_INFINITY;
-      return Math.min(maxAllowed, Math.max(1, base + delta));
+      const currentVal = Number.isFinite(Number(prev)) ? Number(prev) : 1;
+      const next = currentVal + delta;
+      if (type === 'KELUAR' && selectedMaterial) {
+        const maxTake = Math.max(1, Number(selectedMaterial.currentStock ?? 0));
+        return Math.min(maxTake, Math.max(1, next));
+      }
+      return Math.max(1, next);
     });
   };
 
@@ -179,12 +177,10 @@ export function TransactionModal({
       aria-labelledby="tx-modal-title"
     >
       <div className="w-full sm:max-w-2xl max-h-[92vh] flex flex-col rounded-t-3xl sm:rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] shadow-2xl overflow-hidden">
-        {/* Mobile drag handle */}
         <div className="sm:hidden pt-2.5 pb-1 flex justify-center">
           <div className="w-10 h-1.5 rounded-full bg-slate-300 dark:bg-gray-700" />
         </div>
 
-        {/* Header */}
         <div className="px-5 py-3.5 border-b border-[#CBD5E1] dark:border-[#374151] flex items-center justify-between gap-4">
           <h2 id="tx-modal-title" className="font-display text-lg font-bold">
             Catat Pergerakan Stok
@@ -199,9 +195,7 @@ export function TransactionModal({
           </button>
         </div>
 
-        {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
-          {/* Segmented Type Selector */}
           <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-[#F8FAFC] dark:bg-[#090D16] border border-[#CBD5E1] dark:border-[#374151]">
             <button
               type="button"
@@ -229,7 +223,6 @@ export function TransactionModal({
             </button>
           </div>
 
-          {/* Fast Material Search + Selector */}
           <div className="space-y-2">
             <label
               htmlFor="tx-material-select"
@@ -290,7 +283,6 @@ export function TransactionModal({
             )}
           </div>
 
-          {/* 3 Kolom: Kiri (Stok Saat Ini terkunci) | Tengah (Stok yang Akan Masuk / Diambil) | Kanan (Nilai Aktual) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
             {/* Kiri: Stok Saat Ini (tetap tidak bisa diklik) */}
             <div>
@@ -311,7 +303,7 @@ export function TransactionModal({
               />
             </div>
 
-            {/* Tengah: Stok yang Akan Masuk / Diambil (sistem penambahan / pengambilan min 1 hingga habis) */}
+            {/* Tengah: Stok yang Akan Masuk / Diambil */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label
@@ -375,7 +367,7 @@ export function TransactionModal({
               </p>
             </div>
 
-            {/* Kanan: Nilai tetap aktual penambahan / pengurangan dari stok saat ini dan jumlah */}
+            {/* Kanan: Nilai aktual penambahan / pengurangan dari stok saat ini dan jumlah */}
             <div>
               <label
                 htmlFor="tx-actual-result"
@@ -389,13 +381,12 @@ export function TransactionModal({
                 disabled
                 readOnly
                 tabIndex={-1}
-                value={`${formatNumber(projectedStock)} ${unitLabel}`}
+                value={`${formatNumber(actualStockValue)} ${unitLabel}`}
                 className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-slate-100 dark:bg-gray-800/80 text-center font-mono text-sm font-extrabold tabular-nums opacity-90 cursor-not-allowed select-none pointer-events-none"
               />
             </div>
           </div>
 
-          {/* Validasi Stok Habis / Tidak Cukup */}
           {selectedMaterial && isNegativeStock && (
             <div
               role="alert"
@@ -411,7 +402,6 @@ export function TransactionModal({
             </div>
           )}
 
-          {/* Kolom Input Sesuai Jenis Pergerakan */}
           {type === 'MASUK' ? (
             <div>
               <label
@@ -444,7 +434,7 @@ export function TransactionModal({
                   required
                   value={party}
                   onChange={(e) => setParty(e.target.value)}
-                  placeholder="Contoh: Budi Santoso"
+                  placeholder="Contoh: Dava"
                   className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
                 />
               </div>
@@ -462,7 +452,7 @@ export function TransactionModal({
                   required
                   value={usageArea}
                   onChange={(e) => setUsageArea(e.target.value)}
-                  placeholder="Contoh: Line Produksi A"
+                  placeholder="Contoh: SDM / SDA"
                   className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
                 />
               </div>
@@ -486,7 +476,6 @@ export function TransactionModal({
             </div>
           )}
 
-          {/* Deskripsi Material: bisa diisi pada Stok Masuk, sudah tampil pada Stok Keluar */}
           <div>
             <label
               htmlFor="tx-description"
@@ -524,7 +513,6 @@ export function TransactionModal({
             </div>
           )}
 
-          {/* Footer Submit */}
           <div className="pt-2 flex items-center gap-3">
             <button
               type="button"
