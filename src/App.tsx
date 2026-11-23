@@ -91,6 +91,7 @@ export default function App() {
   const [txInitialType, setTxInitialType] = useState<TransactionType>('MASUK');
   const [txInitialMaterialId, setTxInitialMaterialId] = useState<string | undefined>(undefined);
   const [txChoiceOpen, setTxChoiceOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   const [matModalOpen, setMatModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
@@ -601,7 +602,7 @@ export default function App() {
         canManageUsers={profile?.role === 'admin' || profile?.role === 'staff'}
         userName={profile?.fullName || profile?.username || session.user.email || ''}
         roleLabel={getAccessRoleLabel(profile?.role)}
-        onLogout={() => handleLogout()}
+        onLogout={() => setLogoutConfirmOpen(true)}
         notifications={notifications}
         onOpenNotifications={() => handleNavigateMaterials('ALL')}
       >
@@ -757,6 +758,42 @@ export default function App() {
         onUpdate={handleUpdateMaterial}
       />
 
+{logoutConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl text-center space-y-4">
+            <div className="mx-auto w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center text-xl font-bold">
+              !
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Keluar dari Akun?
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Apakah Anda yakin ingin keluar dari sesi aplikasi sekarang?
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setLogoutConfirmOpen(false)}
+                className="py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLogoutConfirmOpen(false);
+                  handleLogout();
+                }}
+                className="py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-xs font-bold text-white shadow-xs cursor-pointer"
+              >
+                Ya, Keluar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </>
   );
