@@ -6,7 +6,6 @@ import {
   History,
   LayoutDashboard,
   LogOut,
-  Package,
   Plus,
   UserRound,
   Users,
@@ -67,9 +66,7 @@ export function AppShell({
 
   const handleLogoutClick = () => {
     if (!onLogout) return;
-    if (window.confirm('Keluar dari akun ini?')) {
-      onLogout();
-    }
+    onLogout();
   };
 
   return (
@@ -77,11 +74,13 @@ export function AppShell({
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white dark:bg-[#111827] border-r border-[#CBD5E1] dark:border-[#374151] z-30">
         <div className="h-16 px-5 flex items-center gap-3 border-b border-[#CBD5E1] dark:border-[#374151]">
-          <div className="w-9 h-9 rounded-xl bg-[#1D4ED8] dark:bg-[#3B82F6] text-white dark:text-[#090D16] flex items-center justify-center shrink-0">
-            <Package className="w-5 h-5" aria-hidden="true" />
-          </div>
-          <span className="font-display text-lg font-extrabold tracking-tight whitespace-nowrap">
-            GudangPro
+          <img
+            src="public/krt.png"
+            alt="Logo Perusahaan"
+            className="w-9 h-9 rounded-xl object-contain shrink-0"
+          />
+          <span className="font-display text-lg font-extrabold tracking-tight whitespace-nowrap truncate">
+            Inventory SDA
           </span>
         </div>
 
@@ -160,13 +159,14 @@ export function AppShell({
           <ThemeToggle theme={theme} onToggle={onToggleTheme} />
         </div>
       </aside>
-
       {/* Mobile Compact Sticky Top Bar (52px height) */}
       <header className="lg:hidden sticky top-0 z-30 h-[52px] px-4 flex items-center justify-between bg-white/95 dark:bg-[#111827]/95 backdrop-blur-md border-b border-[#CBD5E1] dark:border-[#374151]">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-[#1D4ED8] dark:bg-[#3B82F6] text-white dark:text-[#090D16] flex items-center justify-center shrink-0">
-            <Package className="w-4 h-4" aria-hidden="true" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Logo Perusahaan"
+            className="w-8 h-8 rounded-lg object-contain shrink-0"
+          />
           <span className="font-display font-bold text-base truncate">{currentTitle}</span>
           {activeTab === 'dashboard' && (
             <NotificationBell items={notifications} onViewAll={onOpenNotifications} />
@@ -200,7 +200,12 @@ export function AppShell({
       <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
         {/* Desktop Top Header */}
         <header className="hidden lg:flex h-16 px-8 items-center justify-between gap-8 bg-white dark:bg-[#111827] border-b border-[#CBD5E1] dark:border-[#374151] sticky top-0 z-20">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <img
+              src="/logo.png"
+              alt="Logo Perusahaan"
+              className="w-8 h-8 rounded-lg object-contain shrink-0"
+            />
             <h1 className="font-display text-xl font-bold tracking-tight truncate">
               {currentTitle}
             </h1>
