@@ -28,7 +28,7 @@ import {
 } from './types/warehouse';
 import { getStockStatus } from './utils/warehouse';
 
-function mapMaterialRow(row: any): Material & { description?: string; entryDate?: string } {
+function mapMaterialRow(row: any): Material {
   return {
     id: row.id,
     sku: row.sku,
@@ -38,8 +38,6 @@ function mapMaterialRow(row: any): Material & { description?: string; entryDate?
     currentStock: Number(row.current_stock ?? 0),
     minStock: Number(row.min_stock ?? 0),
     location: row.location ?? '',
-    description: row.description ?? '',
-    entryDate: row.entry_date ?? row.created_at ?? '',
     updatedAt: row.updated_at ?? '',
     createdAt: row.created_at ?? '',
   };
@@ -63,7 +61,6 @@ function mapLogRow(row: any): StockLog {
   };
 }
 
-// Batas waktu tidak aktif sebelum otomatis logout (dalam menit)
 const IDLE_LIMIT_MINUTES = 30;
 
 export default function App() {
@@ -89,7 +86,6 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
-  // Modal states
   const [txModalOpen, setTxModalOpen] = useState(false);
   const [txInitialType, setTxInitialType] = useState<TransactionType>('MASUK');
   const [txInitialMaterialId, setTxInitialMaterialId] = useState<string | undefined>(undefined);
@@ -97,7 +93,6 @@ export default function App() {
   const [matModalOpen, setMatModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
 
-  // Toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const pushToast = useCallback(
@@ -115,7 +110,6 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  // Sync Tailwind v4 .dark class on <html>
   useEffect(() => {
     const root = document.documentElement;
     if (theme === 'dark') {
@@ -130,7 +124,6 @@ export default function App() {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   }, []);
 
-  // Pantau status sesi login Supabase
   useEffect(() => {
     if (!supabase) {
       setSession(null);
@@ -153,7 +146,6 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Ambil profil, level, dan izin akses pengguna yang sedang login
   useEffect(() => {
     if (!supabase || !session?.user) {
       setProfile(null);
@@ -265,7 +257,7 @@ export default function App() {
           p_user_agent: navigator.userAgent,
         });
       } catch {
-        // abaikan jika pencatatan gagal, logout tetap dilanjutkan
+        // abaikan jika pencatatan gagal
       }
       await supabase.auth.signOut();
     }
@@ -274,7 +266,6 @@ export default function App() {
     setActiveTab('dashboard');
   }, []);
 
-  // Logout otomatis jika tidak ada aktivitas
   useEffect(() => {
     if (!session) return;
 
@@ -345,7 +336,7 @@ export default function App() {
   }, []);
 
   const handleCreateMaterial = useCallback(
-    async (input: CreateMaterialInput & { description?: string; entryDate?: string }) => {
+    async (input: CreateMaterialInput) => {
       assertCanEdit();
 
       if (!supabase) {
@@ -355,27 +346,18 @@ export default function App() {
       }
 
       const newId = `mat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-      const insertPayload: Record<string, any> = {
-        id: newId,
-        sku: input.sku.trim(),
-        name: input.name.trim(),
-        category: input.category.trim(),
-        unit: input.unit.trim(),
-        current_stock: Number(input.currentStock ?? 0),
-        min_stock: Number(input.minStock ?? 0),
-        location: input.location.trim(),
-      };
-
-      if (input.description !== undefined) {
-        insertPayload.description = input.description.trim();
-      }
-      if (input.entryDate) {
-        insertPayload.entry_date = input.entryDate;
-      }
-
       const { data, error } = await supabase
         .from('materials')
-        .insert(insertPayload)
+        .insert({
+          id: newId,
+          sku: input.sku.trim(),
+          name: input.name.trim(),
+          category: input.category.trim(),
+          unit: input.unit.trim(),
+          current_stock: Number(input.currentStock ?? 0),
+          min_stock: Number(input.minStock ?? 0),
+          location: input.location.trim(),
+        })
         .select()
         .single();
 
@@ -391,10 +373,7 @@ export default function App() {
   );
 
   const handleUpdateMaterial = useCallback(
-    async (
-      id: string,
-      input: UpdateMaterialInput & { description?: string; entryDate?: string }
-    ) => {
+    async (id: string, input: UpdateMaterialInput) => {
       assertCanEdit();
 
       if (!supabase) {
@@ -403,26 +382,17 @@ export default function App() {
         );
       }
 
-      const updatePayload: Record<string, any> = {
-        sku: input.sku.trim(),
-        name: input.name.trim(),
-        category: input.category.trim(),
-        unit: input.unit.trim(),
-        min_stock: Number(input.minStock ?? 0),
-        location: input.location.trim(),
-        updated_at: new Date().toISOString(),
-      };
-
-      if (input.description !== undefined) {
-        updatePayload.description = input.description.trim();
-      }
-      if (input.entryDate) {
-        updatePayload.entry_date = input.entryDate;
-      }
-
       const { data, error } = await supabase
         .from('materials')
-        .update(updatePayload)
+        .update({
+          sku: input.sku.trim(),
+          name: input.name.trim(),
+          category: input.category.trim(),
+          unit: input.unit.trim(),
+          min_stock: Number(input.minStock ?? 0),
+          location: input.location.trim(),
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', id)
         .select()
         .single();
@@ -439,9 +409,7 @@ export default function App() {
   );
 
   const handleSubmitTransaction = useCallback(
-    async (
-      payload: StockTransactionInput & { transactionDate?: string; description?: string }
-    ) => {
+    async (payload: StockTransactionInput & { description?: string }) => {
       assertCanEdit();
 
       if (!supabase) {
@@ -467,19 +435,12 @@ export default function App() {
         throw new Error(`Stok tidak mencukupi (tersedia ${stockBefore} ${target.unit}).`);
       }
 
-      const materialUpdatePayload: Record<string, any> = {
-        current_stock: stockAfter,
-        updated_at: new Date().toISOString(),
-      };
-
-      // Perbarui deskripsi material saat Stok Masuk diisi
-      if (payload.type === 'MASUK' && payload.description !== undefined) {
-        materialUpdatePayload.description = payload.description.trim();
-      }
-
       const { error: updateErr } = await supabase
         .from('materials')
-        .update(materialUpdatePayload)
+        .update({
+          current_stock: stockAfter,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', target.id);
 
       if (updateErr) {
@@ -495,35 +456,25 @@ export default function App() {
             profile?.username ||
             session?.user?.email?.split('@')[0] ||
             'Staf Gudang';
-      const descriptionValue =
-        payload.description?.trim() ||
-        payload.notes?.trim() ||
-        (target as any).description ||
-        '';
+      const descriptionValue = payload.description?.trim() || payload.notes?.trim() || '';
       const logId = `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-
-      const logInsertPayload: Record<string, any> = {
-        id: logId,
-        material_id: target.id,
-        material_sku: target.sku,
-        material_name: target.name,
-        material_unit: target.unit,
-        type: payload.type,
-        quantity: qty,
-        stock_before: stockBefore,
-        stock_after: stockAfter,
-        party: partyValue,
-        pic: picValue,
-        notes: descriptionValue,
-      };
-
-      if (payload.transactionDate) {
-        logInsertPayload.transaction_date = payload.transactionDate;
-      }
 
       const { data: logRow, error: logErr } = await supabase
         .from('stock_logs')
-        .insert(logInsertPayload)
+        .insert({
+          id: logId,
+          material_id: target.id,
+          material_sku: target.sku,
+          material_name: target.name,
+          material_unit: target.unit,
+          type: payload.type,
+          quantity: qty,
+          stock_before: stockBefore,
+          stock_after: stockAfter,
+          party: partyValue,
+          pic: picValue,
+          notes: descriptionValue,
+        })
         .select()
         .single();
 
