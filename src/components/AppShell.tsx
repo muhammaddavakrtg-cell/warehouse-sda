@@ -35,6 +35,8 @@ interface AppShellProps {
   onLogout?: () => void;
   notifications?: NotificationItem[];
   onOpenNotifications?: () => void;
+  onDismissNotification?: (id: string) => void;
+  onClearAllNotifications?: () => void;
   children: ReactNode;
 }
 
@@ -60,6 +62,12 @@ export function AppShell({
   onLogout,
   notifications = [],
   onOpenNotifications,
+  <NotificationBell
+  items={notifications}
+  onViewAll={onOpenNotifications}
+  onDismissNotification={onDismissNotification}
+  onClearAllNotifications={onClearAllNotifications}
+/>
   children,
 }: AppShellProps) {
   const visibleNavItems = NAV_ITEMS.filter(
@@ -112,29 +120,34 @@ export function AppShell({
               {currentTitle}
             </h1>
 
-            {activeTab === 'dashboard' && (
-              <div className="relative flex items-center gap-1.5 shrink-0">
-                <NotificationBell items={notifications} onViewAll={onOpenNotifications} />
+            <div className="relative flex items-center gap-1.5 shrink-0">
+          <NotificationBell
+            items={notifications}
+            onViewAll={onOpenNotifications}
+            onDismissNotification={onDismissNotification}
+            onClearAllNotifications={onClearAllNotifications}
+          />
 
-                {/* Tombol Kalender hanya di Desktop Header (di Mobile dipindah ke dalam menu garis 3) */}
-                <button
-                  type="button"
-                  onClick={() => setCalendarOpen((prev) => !prev)}
-                  aria-label="Buka Kalender"
-                  title="Jam & Kalender"
-                  className="hidden lg:flex w-9 h-9 rounded-xl border border-[#CBD5E1] dark:border-[#374151] items-center justify-center text-[#334155] dark:text-[#D1D5DB] hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-                >
-                  <CalendarDays className="w-4 h-4" aria-hidden="true" />
-                </button>
+          {activeTab === 'dashboard' && (
+            <>
+              <button
+                type="button"
+                onClick={() => setCalendarOpen((prev) => !prev)}
+                aria-label="Buka Kalender"
+                title="Jam & Kalender"
+                className="hidden lg:flex w-9 h-9 rounded-xl border border-[#CBD5E1] dark:border-[#374151] items-center justify-center text-[#334155] dark:text-[#D1D5DB] hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+              >
+                <CalendarDays className="w-4 h-4" aria-hidden="true" />
+              </button>
 
-                {calendarOpen && (
-                  <div className="hidden lg:block absolute left-0 top-11 z-50 w-72 shadow-2xl">
-                    <ClockCalendarCard />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+              {calendarOpen && (
+                <div className="hidden lg:block absolute left-0 top-11 z-50 w-72 shadow-2xl">
+                  <ClockCalendarCard />
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
           {/* Tombol Catat Transaksi hanya di Desktop Header (di Mobile dipindah ke dalam menu garis 3) */}
           <div className="hidden lg:flex items-center gap-3 shrink-0">

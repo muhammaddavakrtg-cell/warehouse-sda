@@ -63,6 +63,9 @@ function mapLogRow(row: any, material?: Material): StockLog {
 }
 
 const IDLE_LIMIT_MINUTES = 30;
+const NOTIF_STORAGE_KEY = 'gudangpro-custom-notifications';
+const DISMISSED_STOCK_KEY = 'gudangpro-dismissed-stock-notifs';
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 export default function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -97,6 +100,71 @@ export default function App() {
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [customNotifications, setCustomNotifications] = useState<NotificationItem[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = window.localStorage.getItem(NOTIF_STORAGE_KEY);
+      const parsed: NotificationItem[] = raw ? JSON.parse(raw) : [];
+      const now = Date.now();
+      return parsed.filter((n) => !n.createdAt || now - n.createdAt < SEVEN_DAYS_MS);
+    } catch {
+      return [];
+    }
+  });
+
+  const [dismissedStockIds, setDismissedStockIds] = useState<Record<string, number>>(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const raw = window.localStorage.getItem(DISMISSED_STOCK_KEY);
+      const parsed: Record<string, number> = raw ? JSON.parse(raw) : {};
+      const now = Date.now();
+      const valid: Record<string, number> = {};
+      Object.entries(parsed).forEach(([id, ts]) => {
+        if (now - ts < SEVEN_DAYS_MS) valid[id] = ts;
+      });
+      return valid;
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(customNotifications));
+    } catch {
+      // abaikan jika storage penuh
+    }
+  }, [customNotifications]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(DISMISSED_STOCK_KEY, JSON.stringify(dismissedStockIds));
+    } catch {
+      // abaikan jika storage penuh
+    }
+  }, [dismissedStockIds]);
+
+  const handleDismissNotification = useCallback((id: string) => {
+    if (id.startsWith('added-')) {
+      setCustomNotifications((prev) => prev.filter((n) => n.id !== id));
+    } else {
+      setDismissedStockIds((prev) => ({ ...prev, [id]: Date.now() }));
+    }
+  }, []);
+
+  const handleClearAllNotifications = useCallback(() => {
+    setCustomNotifications([]);
+    setDismissedStockIds((prev) => {
+      const next = { ...prev };
+      const now = Date.now();
+      materials.forEach((m) => {
+        if (getStockStatus(m.currentStock, m.minStock) !== 'AMAN') {
+          next[m.id] = now;
+        }
+      });
+      return next;
+    });
+  }, [materials]);
 
   const pushToast = useCallback(
     (variant: ToastMessage['variant'], title: string, description?: string) => {
@@ -309,9 +377,18 @@ export default function App() {
   }, [session, handleLogout]);
 
   const notifications = useMemo<NotificationItem[]>(() => {
-    return materials
+    const now = Date.now();
+    const activeAdded = customNotifications.filter(
+      (n) => !n.createdAt || now - n.createdAt < SEVEN_DAYS_MS
+    );
+
+    const stockAlerts = materials
       .map((m) => ({ m, status: getStockStatus(m.currentStock, m.minStock) }))
-      .filter((x) => x.status !== 'AMAN')
+      .filter((x) => {
+        if (x.status === 'AMAN') return false;
+        const dismissedAt = dismissedStockIds[x.m.id];
+        return !dismissedAt || now - dismissedAt >= SEVEN_DAYS_MS;
+      })
       .sort((a, b) => (a.status === b.status ? 0 : a.status === 'HABIS' ? -1 : 1))
       .map(({ m, status }) => ({
         id: m.id,
@@ -319,7 +396,9 @@ export default function App() {
         description: `${status === 'HABIS' ? 'Stok habis' : 'Stok menipis'}: ${m.currentStock} ${m.unit} (min. ${m.minStock})`,
         level: status === 'HABIS' ? ('HABIS' as const) : ('MENIPIS' as const),
       }));
-  }, [materials]);
+
+    return [...activeAdded, ...stockAlerts];
+  }, [customNotifications, materials, dismissedStockIds]);
 
   const criticalCount = useMemo(
     () => materials.filter((m) => getStockStatus(m.currentStock, m.minStock) !== 'AMAN').length,
@@ -373,6 +452,16 @@ export default function App() {
       }
 
       const created = mapMaterialRow(data);
+      setCustomNotifications((prev) => [
+        {
+          id: `added-${created.id}-${Date.now()}`,
+          title: 'Material Baru Ditambahkan',
+          description: `${created.sku} — ${created.name} (${created.currentStock} ${created.unit}) telah ditambahkan.`,
+          level: 'ADDED',
+          createdAt: Date.now(),
+        },
+        ...prev,
+      ]);
       await fetchWarehouseData();
       pushToast('success', 'Material berhasil ditambahkan', `${created.sku} — ${created.name}`);
     },
@@ -621,7 +710,11 @@ export default function App() {
             </button>
           </div>
         )}
-
+  
+        notifications={notifications}
+        onOpenNotifications={() => handleNavigateMaterials('ALL')}
+        onDismissNotification={handleDismissNotification}
+        onClearAllNotifications={handleClearAllNotifications}
         {activeTab === 'dashboard' && (
           <DashboardView
             materials={materials}
