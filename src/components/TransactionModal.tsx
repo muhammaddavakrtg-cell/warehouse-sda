@@ -140,11 +140,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setSubmitting(false);
     }
   };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
       <div className="w-full max-w-xl rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">
             Input Material Keluar
@@ -165,7 +163,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </div>
           )}
 
-          {/* 1. Cari Material */}
           <div className="relative">
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
               Cari Material *
@@ -181,7 +178,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               />
             </div>
 
-            {/* Dropdown Hasil Pencarian */}
             {searchQuery.trim() !== '' && !selectedMaterial && (
               <div className="mt-1.5 max-h-40 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg divide-y divide-slate-100 dark:divide-slate-700">
                 {filteredMaterials.length > 0 ? (
@@ -216,5 +212,166 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             )}
           </div>
 
-          {/* 2. QCODE Material & Nama Material (Otomatis) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                QCODE Material *
+              </label>
+              <input
+                type="text"
+                readOnly
+                value={selectedMaterial?.sku ?? ''}
+                placeholder="Otomatis dari pencarian"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 text-sm font-semibold text-slate-800 dark:text-slate-200"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Nama Material *
+              </label>
+              <input
+                type="text"
+                readOnly
+                value={selectedMaterial?.name ?? ''}
+                placeholder="Otomatis dari pencarian"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 text-sm font-semibold text-slate-800 dark:text-slate-200"
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Deskripsi Material
+              </label>
+              {selectedMaterial && (
+                <span className="text-xs font-bold text-orange-600 dark:text-orange-400">
+                  Sisa Stok: {selectedMaterial.currentStock} {selectedMaterial.unit} (Setelah:{' '}
+                  {remainingAfter} {selectedMaterial.unit})
+                </span>
+              )}
+            </div>
+            <textarea
+              rows={2}
+              readOnly
+              value={selectedMaterial?.description ?? ''}
+              placeholder="Spesifikasi atau deskripsi material akan muncul otomatis..."
+              className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 text-sm text-slate-700 dark:text-slate-300 resize-none"
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Material Keluar
+                {selectedMaterial ? ` (${selectedMaterial.unit})` : ''}
+              </label>
+              <button
+                type="button"
+                onClick={() => setQuantity(1)}
+                className="text-xs font-bold text-orange-600 hover:text-orange-700 dark:text-orange-400 cursor-pointer"
+              >
+                Reset ke 1
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                className="w-11 h-11 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-base font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 cursor-pointer"
+              >
+                -
+              </button>
+              <input
+                type="number"
+                min={1}
+                max={selectedMaterial ? selectedMaterial.currentStock : undefined}
+                value={quantity}
+                onChange={(e) => {
+                  const val = Math.max(1, Number(e.target.value) || 1);
+                  setQuantity(
+                    selectedMaterial ? Math.min(selectedMaterial.currentStock, val) : val
+                  );
+                }}
+                className="flex-1 h-11 text-center rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-base font-bold text-slate-900 dark:text-white"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  setQuantity((prev) =>
+                    selectedMaterial
+                      ? Math.min(selectedMaterial.currentStock, prev + 1)
+                      : prev + 1
+                  )
+                }
+                className="w-11 h-11 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-base font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 cursor-pointer"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Nama Pengambil *
+              </label>
+              <input
+                type="text"
+                required
+                value={takerName}
+                onChange={(e) => setTakerName(e.target.value)}
+                placeholder="Contoh: Budi Santoso"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Area Penggunaan *
+              </label>
+              <input
+                type="text"
+                required
+                value={usageArea}
+                onChange={(e) => setUsageArea(e.target.value)}
+                placeholder="Contoh: Jalur Produksi A"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Tanggal Material Keluar
+              </label>
+              <input
+                type="date"
+                value={exitDate}
+                onChange={(e) => setExitDate(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || !selectedMaterial || currentStock <= 0}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white bg-[#C2410C] hover:bg-[#9A3412] shadow-sm transition cursor-pointer disabled:opacity-50"
+            >
+              <Check className="w-4 h-4" />
+              {submitting ? 'Menyimpan...' : 'Input Material Keluar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
