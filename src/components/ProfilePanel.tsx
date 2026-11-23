@@ -16,9 +16,13 @@ export function ProfilePanel({ profile, onProfileUpdated, onNotify }: ProfilePan
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  const [newEmail, setNewEmail] = useState('');
+
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     if (!profile) return;
@@ -121,6 +125,45 @@ export function ProfilePanel({ profile, onProfileUpdated, onNotify }: ProfilePan
     }
   };
 
+  const handleChangeEmail = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!supabase) return;
+
+    const cleanEmail = newEmail.trim().toLowerCase();
+
+    if (!cleanEmail) {
+      onNotify('error', 'Email wajib diisi', 'Masukkan alamat email baru.');
+      return;
+    }
+
+    if (cleanEmail === String(profile.email || '').trim().toLowerCase()) {
+      onNotify('info', 'Email sama', 'Email baru sama dengan email Anda saat ini.');
+      return;
+    }
+
+    setSavingEmail(true);
+    try {
+      const { error } = await supabase.auth.updateUser(
+        { email: cleanEmail },
+        { emailRedirectTo: `${window.location.origin}/` }
+      );
+      if (error) {
+        throw new Error(error.message || 'Gagal mengganti email.');
+      }
+
+      setNewEmail('');
+      onNotify(
+        'success',
+        'Tautan konfirmasi dikirim',
+        `Buka email ${cleanEmail} (cek juga folder Spam) lalu klik tautan konfirmasi. Email baru berlaku setelah dikonfirmasi.`
+      );
+    } catch (err: any) {
+      onNotify('error', 'Gagal ganti email', err?.message || 'Terjadi kesalahan.');
+    } finally {
+      setSavingEmail(false);
+    }
+  };
+
   const handleChangePassword = async (e: FormEvent) => {
     e.preventDefault();
     if (!supabase) return;
@@ -149,6 +192,20 @@ export function ProfilePanel({ profile, onProfileUpdated, onNotify }: ProfilePan
       onNotify('error', 'Gagal ganti password', err?.message || 'Terjadi kesalahan.');
     } finally {
       setSavingPassword(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (!supabase) return;
+    setLoggingOut(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        throw new Error(error.message || 'Gagal keluar.');
+      }
+    } catch (err: any) {
+      onNotify('error', 'Gagal keluar', err?.message || 'Terjadi kesalahan.');
+      setLoggingOut(false);
     }
   };
 
@@ -207,45 +264,91 @@ export function ProfilePanel({ profile, onProfileUpdated, onNotify }: ProfilePan
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Form Edit Data Profil */}
-        <form onSubmit={handleSaveProfile} className="space-y-3.5">
-          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Data Profil</h3>
-          <div>
-            <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">
-              Nama Lengkap
-            </label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Nama lengkap pengguna"
-              className="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">
-              Username
-            </label>
-            <input
-              type="text"
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="username"
-              className="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={savingProfile}
-            className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white cursor-pointer"
+        {/* Kolom kiri: Data Profil + Ganti Email */}
+        <div className="space-y-6">
+          {/* Form Edit Data Profil */}
+          <form onSubmit={handleSaveProfile} className="space-y-3.5">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Data Profil</h3>
+            <div>
+              <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">
+                Nama Lengkap
+              </label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Nama lengkap pengguna"
+                className="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">
+                Username
+              </label>
+              <input
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="username"
+                className="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={savingProfile}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white cursor-pointer"
+            >
+              {savingProfile ? 'Menyimpan...' : 'Simpan Data Profil'}
+            </button>
+          </form>
+
+          {/* Form Ganti Email */}
+          <form
+            onSubmit={handleChangeEmail}
+            className="space-y-3.5 border-t border-slate-200 dark:border-slate-800 pt-6"
           >
-            {savingProfile ? 'Menyimpan...' : 'Simpan Data Profil'}
-          </button>
-        </form>
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Ganti Email</h3>
+            <div>
+              <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">
+                Email Saat Ini
+              </label>
+              <input
+                type="email"
+                value={profile.email || ''}
+                readOnly
+                className="w-full px-3 py-2 rounded-xl text-sm border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">
+                Email Baru
+              </label>
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="emailbaru@contoh.com"
+                className="w-full px-3 py-2 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+              />
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Tautan konfirmasi akan dikirim ke email baru. Email baru berlaku setelah tautan diklik.
+            </p>
+            <button
+              type="submit"
+              disabled={savingEmail}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white cursor-pointer"
+            >
+              {savingEmail ? 'Mengirim...' : 'Ganti Email'}
+            </button>
+          </form>
+        </div>
 
         {/* Form Ganti Password */}
-        <form onSubmit={handleChangePassword} className="space-y-3.5">
+        <form onSubmit={handleChangePassword} className="space-y-3.5 lg:self-start">
           <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Ganti Password</h3>
           <div>
             <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">
@@ -283,6 +386,18 @@ export function ProfilePanel({ profile, onProfileUpdated, onNotify }: ProfilePan
             {savingPassword ? 'Mengganti...' : 'Ganti Password'}
           </button>
         </form>
+      </div>
+
+      {/* Tombol Keluar di bagian bawah */}
+      <div className="flex justify-end border-t border-slate-200 dark:border-slate-800 pt-4">
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className="px-4 py-2 rounded-xl text-xs font-semibold border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950 disabled:opacity-60 cursor-pointer"
+        >
+          {loggingOut ? 'Keluar...' : 'Keluar'}
+        </button>
       </div>
     </section>
   );

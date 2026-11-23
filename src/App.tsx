@@ -12,7 +12,6 @@ import { ToastContainer } from './components/ToastContainer';
 import { TransactionModal } from './components/TransactionModal';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import {
-  getAccessRoleLabel,
   type AccessLevel,
   type CreateMaterialInput,
   type Material,
@@ -73,7 +72,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(false);
+  const [, setProfileLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [materialsStatusFilter, setMaterialsStatusFilter] = useState<StockStatus | 'ALL'>('ALL');
@@ -482,51 +481,6 @@ export default function App() {
         canEdit={canEdit}
          canManageUsers={profile?.role === 'admin' || profile?.role === 'staff'}
       >
-        {/* Bar info profil, level, dan izin akses pengguna */}
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 text-xs">
-          <div className="flex flex-wrap items-center gap-2.5 min-w-0">
-            <div className="truncate text-slate-700 dark:text-slate-200">
-              Login sebagai:{' '}
-              <strong className="font-semibold">
-                {profileLoading
-                  ? 'Memuat profil...'
-                  : profile?.fullName || profile?.username || session.user.email}
-              </strong>{' '}
-              {!profileLoading && (
-                <span className="text-slate-500 dark:text-slate-400">
-                  (@{profile?.username || session.user.email?.split('@')[0]})
-                </span>
-              )}
-            </div>
-
-            {!profileLoading && (
-              <>
-                <span className="px-2.5 py-0.5 rounded-full font-bold text-[11px] bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                  Level: {getAccessRoleLabel(profile?.role)}
-                </span>
-
-                <span
-                  className={`px-2.5 py-0.5 rounded-full font-bold text-[11px] border ${
-                    canEdit
-                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                  }`}
-                >
-                  Izin: {canEdit ? 'Lihat & Edit' : 'Hanya Lihat'}
-                </span>
-              </>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="px-3 py-1.5 rounded-xl font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-          >
-            Keluar
-          </button>
-        </div>
-
         {loadError && (
           <div
             role="alert"
@@ -598,6 +552,7 @@ export default function App() {
             profile={profile}
             onProfileUpdated={setProfile}
             onNotify={pushToast}
+            onLogout={handleLogout}
           />
         )}
       </AppShell>
