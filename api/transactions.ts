@@ -77,7 +77,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       const logEntry: StockLog = {
         id: `log-${crypto.randomUUID().slice(0, 8)}`,
         materialId: material.id,
-        materialSku: material.sku,
+        materialQCODE: material.QCODE,
         materialName: material.name,
         materialUnit: material.unit,
         type: payload.type,

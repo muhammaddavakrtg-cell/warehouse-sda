@@ -74,14 +74,14 @@ export function WarehouseAiAssistant({
       if (stats.habis.length > 0) {
         lines.push(`🔴 Stok Habis (${stats.habis.length}):`);
         stats.habis.slice(0, 5).forEach((m) => {
-          lines.push(`• ${m.sku} — ${m.name} (0 ${m.unit})`);
+          lines.push(`• ${m.QCODE} — ${m.name} (0 ${m.unit})`);
         });
       }
       if (stats.menipis.length > 0) {
         lines.push(`🟡 Stok Menipis (${stats.menipis.length}):`);
         stats.menipis.slice(0, 5).forEach((m) => {
           lines.push(
-            `• ${m.sku} — ${m.name} (sisa ${formatNumber(m.currentStock)}/${formatNumber(m.minStock)} ${m.unit})`
+            `• ${m.QCODE} — ${m.name} (sisa ${formatNumber(m.currentStock)}/${formatNumber(m.minStock)} ${m.unit})`
           );
         });
       }
@@ -92,7 +92,7 @@ export function WarehouseAiAssistant({
         sender: 'ai',
         text: lines.join('\n'),
         actionMaterialId: topPriority?.id,
-        actionLabel: topPriority ? `Restock ${topPriority.sku}` : undefined,
+        actionLabel: topPriority ? `Restock ${topPriority.QCODE}` : undefined,
       };
     }
 
@@ -116,19 +116,19 @@ export function WarehouseAiAssistant({
       };
     }
 
-    if (q.includes('total') || q.includes('berapa material') || q.includes('jumlah sku')) {
+    if (q.includes('total') || q.includes('berapa material') || q.includes('jumlah QCODE')) {
       return {
         id,
         sender: 'ai',
-        text: `📦 Saat ini terdaftar ${formatNumber(materials.length)} SKU material di sistem:\n• Aman: ${formatNumber(materials.length - stats.habis.length - stats.menipis.length)} SKU\n• Menipis: ${formatNumber(stats.menipis.length)} SKU\n• Stok Habis: ${formatNumber(stats.habis.length)} SKU`,
+        text: `📦 Saat ini terdaftar ${formatNumber(materials.length)} QCODE material di sistem:\n• Aman: ${formatNumber(materials.length - stats.habis.length - stats.menipis.length)} QCODE\n• Menipis: ${formatNumber(stats.menipis.length)} QCODE\n• Stok Habis: ${formatNumber(stats.habis.length)} QCODE`,
       };
     }
 
     const matched = materials.filter(
       (m) =>
-        m.sku.toLowerCase().includes(q) ||
+        m.QCODE.toLowerCase().includes(q) ||
         m.name.toLowerCase().includes(q) ||
-        q.includes(m.sku.toLowerCase())
+        q.includes(m.QCODE.toLowerCase())
     );
 
     if (matched.length > 0) {
@@ -141,9 +141,9 @@ export function WarehouseAiAssistant({
       return {
         id,
         sender: 'ai',
-        text: `🔎 ${item.sku} — ${item.name}\n• Sisa Stok: ${formatNumber(item.currentStock)} ${item.unit} (Status: ${status})\n• Minimum Stok: ${formatNumber(item.minStock)} ${item.unit}\n• Deskripsi: ${item.description || '-'}${extra}`,
+        text: `🔎 ${item.QCODE} — ${item.name}\n• Sisa Stok: ${formatNumber(item.currentStock)} ${item.unit} (Status: ${status})\n• Minimum Stok: ${formatNumber(item.minStock)} ${item.unit}\n• Deskripsi: ${item.description || '-'}${extra}`,
         actionMaterialId: status !== 'AMAN' ? item.id : undefined,
-        actionLabel: status !== 'AMAN' ? `Restock ${item.sku}` : undefined,
+        actionLabel: status !== 'AMAN' ? `Restock ${item.QCODE}` : undefined,
       };
     }
 

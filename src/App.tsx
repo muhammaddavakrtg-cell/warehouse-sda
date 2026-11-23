@@ -32,7 +32,7 @@ import { getStockStatus } from './utils/warehouse';
 function mapMaterialRow(row: any): Material {
   return {
     id: row.id,
-    sku: row.sku,
+    QCODE: row.QCODE,
     name: row.name,
     category: row.category,
     unit: row.unit,
@@ -49,7 +49,7 @@ function mapLogRow(row: any, material?: Material): StockLog {
   return {
     id: row.id,
     materialId: row.material_id,
-    materialSku: row.material_sku ?? material?.sku ?? '-',
+    materialQCODE: row.material_QCODE ?? material?.QCODE ?? '-',
     materialName: row.material_name ?? material?.name ?? 'Material tidak ditemukan',
     materialUnit: row.material_unit ?? material?.unit ?? 'unit',
     type: row.type,
@@ -299,7 +299,7 @@ export default function App() {
       setIsLoading(true);
       setLoadError('');
       const [matRes, logRes] = await Promise.all([
-        supabase.from('materials').select('*').order('sku', { ascending: true }),
+        supabase.from('materials').select('*').order('QCODE', { ascending: true }),
         supabase.from('stock_logs').select('*').order('created_at', { ascending: false }),
       ]);
 
@@ -443,11 +443,11 @@ export default function App() {
         );
       }
 
-      const normalizedSku = input.sku.trim().toUpperCase();
+      const normalizedQCODE = input.QCODE.trim().toUpperCase();
       const qtyToAdd = Math.max(1, Number(input.currentStock ?? 1));
 
       const existing = materials.find(
-        (m) => m.sku.trim().toUpperCase() === normalizedSku
+        (m) => m.QCODE.trim().toUpperCase() === normalizedQCODE
       );
 
       if (existing) {
@@ -471,7 +471,7 @@ export default function App() {
 
         await supabase.from('stock_logs').insert({
           material_id: existing.id,
-          material_sku: existing.sku,
+          material_QCODE: existing.QCODE,
           material_name: existing.name,
           material_unit: existing.unit,
           type: 'MASUK',
@@ -492,7 +492,7 @@ export default function App() {
           {
             id: `added-${updated.id}-${Date.now()}`,
             title: 'Stok Material Ditambahkan',
-            description: `${updated.sku} — ${updated.name} (+${qtyToAdd} ${updated.unit}, total: ${updated.currentStock} ${updated.unit}).`,
+            description: `${updated.QCODE} — ${updated.name} (+${qtyToAdd} ${updated.unit}, total: ${updated.currentStock} ${updated.unit}).`,
             level: 'ADDED',
             createdAt: Date.now(),
           },
@@ -503,7 +503,7 @@ export default function App() {
         pushToast(
           'success',
           'Stok material ditambahkan',
-          `${updated.sku} — ${updated.name} (+${qtyToAdd} ${updated.unit})`
+          `${updated.QCODE} — ${updated.name} (+${qtyToAdd} ${updated.unit})`
         );
         return;
       }
@@ -511,7 +511,7 @@ export default function App() {
       const { data, error } = await supabase
         .from('materials')
         .insert({
-          sku: normalizedSku,
+          QCODE: normalizedQCODE,
           name: input.name.trim(),
           category: input.category.trim(),
           unit: input.unit.trim(),
@@ -523,8 +523,8 @@ export default function App() {
         .single();
 
       if (error) {
-        if (error.message?.includes('materials_sku_key')) {
-          throw new Error(`QCODE "${normalizedSku}" sudah terdaftar. Gunakan menu Edit/Restock atau masukkan QCODE berbeda.`);
+        if (error.message?.includes('materials_QCODE_key')) {
+          throw new Error(`QCODE "${normalizedQCODE}" sudah terdaftar. Gunakan menu Edit/Restock atau masukkan QCODE berbeda.`);
         }
         throw new Error(error.message || 'Gagal menambahkan material.');
       }
@@ -534,7 +534,7 @@ export default function App() {
         {
           id: `added-${created.id}-${Date.now()}`,
           title: 'Material Baru Ditambahkan',
-          description: `${created.sku} — ${created.name} (${created.currentStock} ${created.unit}) telah ditambahkan.`,
+          description: `${created.QCODE} — ${created.name} (${created.currentStock} ${created.unit}) telah ditambahkan.`,
           level: 'ADDED',
           createdAt: Date.now(),
         },
@@ -542,7 +542,7 @@ export default function App() {
       ]);
 
       await fetchWarehouseData();
-      pushToast('success', 'Material berhasil ditambahkan', `${created.sku} — ${created.name}`);
+      pushToast('success', 'Material berhasil ditambahkan', `${created.QCODE} — ${created.name}`);
     },
     [assertCanEdit, materials, profile, session, fetchWarehouseData, pushToast]
   );
@@ -574,7 +574,7 @@ export default function App() {
       const { data, error } = await supabase
         .from('materials')
         .update({
-          sku: input.sku.trim(),
+          QCODE: input.QCODE.trim(),
           name: input.name.trim(),
           category: input.category.trim(),
           unit: input.unit.trim(),
@@ -596,7 +596,7 @@ export default function App() {
           .from('stock_logs')
           .insert({
             material_id: target.id,
-            material_sku: input.sku.trim(),
+            material_QCODE: input.QCODE.trim(),
             material_name: input.name.trim(),
             material_unit: input.unit,
             type: 'MASUK',
@@ -626,7 +626,7 @@ export default function App() {
         'Material berhasil diperbarui',
         addedStock > 0
           ? `${updated.name}: ${stockBefore} + ${addedStock} = ${stockAfter} ${updated.unit}`
-          : `${updated.sku} — ${updated.name}`
+          : `${updated.QCODE} — ${updated.name}`
       );
     },
     [assertCanEdit, materials, profile, session, fetchWarehouseData, pushToast]
@@ -686,7 +686,7 @@ export default function App() {
         .from('stock_logs')
         .insert({
           material_id: target.id,
-          material_sku: target.sku,
+          material_QCODE: target.QCODE,
           material_name: target.name,
           material_unit: target.unit,
           type: payload.type,

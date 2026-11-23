@@ -54,7 +54,7 @@ export function MaterialFormModal({
   useEffect(() => {
     if (isOpen) {
       if (editingMaterial) {
-        setQcode(editingMaterial.sku);
+        setQcode(editingMaterial.QCODE);
         setName(editingMaterial.name);
         setDescription((editingMaterial as any).description ?? '');
         setAddedQty(0);
@@ -112,7 +112,7 @@ export function MaterialFormModal({
       setIsSubmitting(true);
       if (editingMaterial) {
         await onUpdate(editingMaterial.id, {
-          sku: qcode.trim().toUpperCase(),
+          QCODE: qcode.trim().toUpperCase(),
           name: name.trim(),
           category: editingMaterial.category || 'Raw Material',
           unit: uom,
@@ -124,7 +124,7 @@ export function MaterialFormModal({
         });
       } else {
         await onCreate({
-          sku: qcode.trim().toUpperCase(),
+          QCODE: qcode.trim().toUpperCase(),
           name: name.trim(),
           category: 'Raw Material',
           unit: uom,

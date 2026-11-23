@@ -14,7 +14,7 @@ export type MaterialCategory =
 
 export interface Material {
   id: string;
-  sku: string;
+  QCODE: string;
   name: string;
   category: MaterialCategory;
   unit: MaterialUnit;
@@ -28,7 +28,7 @@ export interface Material {
 export interface StockLog {
   id: string;
   materialId: string;
-  materialSku: string;
+  materialQCODE: string;
   materialName: string;
   materialUnit: MaterialUnit;
   type: TransactionType;
@@ -42,7 +42,7 @@ export interface StockLog {
 }
 
 export interface CreateMaterialInput {
-  sku: string;
+  QCODE: string;
   name: string;
   category: MaterialCategory;
   unit: MaterialUnit;
@@ -52,7 +52,7 @@ export interface CreateMaterialInput {
 }
 
 export interface UpdateMaterialInput {
-  sku: string;
+  QCODE: string;
   name: string;
   category: MaterialCategory;
   unit: MaterialUnit;

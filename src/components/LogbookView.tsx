@@ -30,7 +30,7 @@ export function LogbookView({ logs }: LogbookViewProps) {
       if (q) {
         const match =
           log.materialName.toLowerCase().includes(q) ||
-          log.materialSku.toLowerCase().includes(q) ||
+          log.materialQCODE.toLowerCase().includes(q) ||
           log.party.toLowerCase().includes(q) ||
           log.pic.toLowerCase().includes(q) ||
           log.notes.toLowerCase().includes(q);
@@ -109,7 +109,7 @@ export function LogbookView({ logs }: LogbookViewProps) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari material, SKU, supplier/pemohon, PIC, atau catatan..."
+              placeholder="Cari material, QCODE, supplier/pemohon, PIC, atau catatan..."
               aria-label="Cari logbook"
               className="w-full min-h-[44px] pl-10 pr-10 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm text-[#0F172A] dark:text-[#F9FAFB] placeholder:text-slate-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
             />
@@ -275,7 +275,7 @@ export function LogbookView({ logs }: LogbookViewProps) {
 
                 <div>
                   <p className="font-mono text-xs font-semibold text-[#334155] dark:text-[#D1D5DB]">
-                    {log.materialSku}
+                    {log.materialQCODE}
                   </p>
                   <h3 className="font-display font-bold text-base leading-snug">
                     {log.materialName}
@@ -329,7 +329,7 @@ export function LogbookView({ logs }: LogbookViewProps) {
                   <tr className="border-b border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-xs font-bold text-[#334155] dark:text-[#D1D5DB]">
                     <th className="py-3.5 px-4 whitespace-nowrap">Waktu Transaksi</th>
                     <th className="py-3.5 px-4 whitespace-nowrap">Jenis</th>
-                    <th className="py-3.5 px-4">Material & SKU</th>
+                    <th className="py-3.5 px-4">Material & QCODE</th>
                     <th className="py-3.5 px-4 text-right whitespace-nowrap">Jumlah</th>
                     <th className="py-3.5 px-4 text-right whitespace-nowrap">Stok Awal → Akhir</th>
                     <th className="py-3.5 px-4">Sumber / Pemohon & PIC</th>
@@ -353,7 +353,7 @@ export function LogbookView({ logs }: LogbookViewProps) {
                           {log.materialName}
                         </p>
                         <p className="font-mono text-xs text-[#334155] dark:text-[#D1D5DB]">
-                          {log.materialSku}
+                          {log.materialQCODE}
                         </p>
                       </td>
                       <td

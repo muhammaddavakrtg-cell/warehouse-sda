@@ -50,7 +50,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     if (initialMaterialId) {
       const found = materials.find((m) => m.id === initialMaterialId);
       setSelectedMaterialId(found ? found.id : '');
-      setSearchQuery(found ? found.sku : '');
+      setSearchQuery(found ? found.QCODE : '');
     } else {
       setSelectedMaterialId('');
       setSearchQuery('');
@@ -62,7 +62,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     if (!q) return materials.slice(0, 8);
     return materials.filter(
       (m) =>
-        m.sku.toLowerCase().includes(q) ||
+        m.QCODE.toLowerCase().includes(q) ||
         m.name.toLowerCase().includes(q)
     );
   }, [materials, searchQuery]);
@@ -75,7 +75,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       return;
     }
     const exactMatch = materials.find(
-      (m) => m.sku.toLowerCase() === q || m.name.toLowerCase() === q
+      (m) => m.QCODE.toLowerCase() === q || m.name.toLowerCase() === q
     );
     if (exactMatch) {
       setSelectedMaterialId(exactMatch.id);
@@ -187,14 +187,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                       type="button"
                       onClick={() => {
                         setSelectedMaterialId(item.id);
-                        setSearchQuery(item.sku);
+                        setSearchQuery(item.QCODE);
                         setQuantity(1);
                       }}
                       className="w-full px-3.5 py-2 text-left text-xs hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-between gap-2 cursor-pointer"
                     >
                       <div>
                         <span className="font-bold text-slate-900 dark:text-white">
-                          {item.sku}
+                          {item.QCODE}
                         </span>{' '}
                         — <span className="text-slate-600 dark:text-slate-300">{item.name}</span>
                       </div>
@@ -220,7 +220,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <input
                 type="text"
                 readOnly
-                value={selectedMaterial?.sku ?? ''}
+                value={selectedMaterial?.QCODE ?? ''}
                 placeholder="Otomatis dari pencarian"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 text-sm font-semibold text-slate-800 dark:text-slate-200"
               />

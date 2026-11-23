@@ -35,9 +35,9 @@ export async function exportMaterialsToPdf(materials: Material[]): Promise<void>
 
   autoTable(doc, {
     startY: 25,
-    head: [['SKU', 'Nama Material', 'Kategori', 'Satuan', 'Stok', 'Stok Min', 'Status', 'Lokasi', 'Diperbarui']],
+    head: [['QCODE', 'Nama Material', 'Kategori', 'Satuan', 'Stok', 'Stok Min', 'Status', 'Lokasi', 'Diperbarui']],
     body: materials.map((m) => [
-      m.sku,
+      m.QCODE,
       m.name,
       m.category,
       m.unit,
@@ -87,7 +87,7 @@ export async function exportMaterialsToExcel(materials: Material[]): Promise<voi
   const XLSX = await import('xlsx');
 
   const header = [
-    'SKU',
+    'QCODE',
     'Nama Material',
     'Kategori',
     'Satuan',
@@ -99,7 +99,7 @@ export async function exportMaterialsToExcel(materials: Material[]): Promise<voi
   ];
 
   const rows = materials.map((m) => [
-    m.sku,
+    m.QCODE,
     m.name,
     m.category,
     m.unit,
