@@ -44,13 +44,13 @@ function mapMaterialRow(row: any): Material {
   };
 }
 
-function mapLogRow(row: any): StockLog {
+function mapLogRow(row: any, material?: Material): StockLog {
   return {
     id: row.id,
     materialId: row.material_id,
-    materialSku: row.material_sku,
-    materialName: row.material_name,
-    materialUnit: row.material_unit,
+    materialSku: row.material_sku ?? material?.sku ?? '-',
+    materialName: row.material_name ?? material?.name ?? 'Material tidak ditemukan',
+    materialUnit: row.material_unit ?? material?.unit ?? 'unit',
     type: row.type,
     quantity: Number(row.quantity ?? 0),
     stockBefore: Number(row.stock_before ?? 0),
@@ -237,8 +237,14 @@ export default function App() {
         );
       }
 
-      setMaterials((matRes.data ?? []).map(mapMaterialRow));
-      setLogs((logRes.data ?? []).map(mapLogRow));
+      const materialsFromDb = (matRes.data ?? []).map(mapMaterialRow);
+      const materialsById = new Map(materialsFromDb.map((material) => [material.id, material]));
+      setMaterials(materialsFromDb);
+      setLogs(
+        (logRes.data ?? []).map((row) =>
+          mapLogRow(row, materialsById.get(row.material_id))
+        )
+      );
     } catch (err: any) {
       setLoadError(err?.message || 'Terjadi kesalahan saat memuat data.');
     } finally {
@@ -422,7 +428,6 @@ export default function App() {
           .insert({
             material_id: target.id,
             material_sku: input.sku.trim(),
-            material_name: input.name.trim(),
             material_unit: input.unit,
             type: 'MASUK',
             quantity: addedStock,
@@ -513,7 +518,6 @@ export default function App() {
         .insert({
           material_id: target.id,
           material_sku: target.sku,
-          material_name: target.name,
           material_unit: target.unit,
           type: payload.type,
           quantity: qty,
