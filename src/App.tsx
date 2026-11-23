@@ -405,17 +405,25 @@ export default function App() {
     [materials]
   );
 
-  const handleOpenTransaction = useCallback(
+ const handleOpenTransaction = useCallback(
     (type: TransactionType, materialId?: string) => {
       if (!canEdit) {
         pushToast('info', 'Mode Hanya Lihat', 'Akun Anda tidak memiliki izin mencatat transaksi.');
         return;
       }
+
+      if (type === 'MASUK') {
+        const targetMat = materialId ? materials.find((m) => m.id === materialId) ?? null : null;
+        setEditingMaterial(targetMat);
+        setMatModalOpen(true);
+        return;
+      }
+
       setTxInitialType(type);
       setTxInitialMaterialId(materialId);
       setTxModalOpen(true);
     },
-    [canEdit, pushToast]
+    [canEdit, materials, pushToast]
   );
 
   const handleNavigateMaterials = useCallback((statusFilter: StockStatus | 'ALL' = 'ALL') => {

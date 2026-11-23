@@ -45,7 +45,7 @@ export function MaterialFormModal({
   const [qcode, setQcode] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [addedQty, setAddedQty] = useState<number>(0);
+  const [addedQty, setAddedQty] = useState<number>(1);
   const [entryDate, setEntryDate] = useState<string>(() => getTodayDateString());
   const [uom, setUom] = useState<MaterialUnit>('pcs');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,6 +81,15 @@ export function MaterialFormModal({
   const isEdit = Boolean(editingMaterial);
   const addedStockValue = Math.max(0, Number(addedQty) || 0);
 
+  // Semua kolom wajib terisi sebelum tombol simpan/input aktif
+  const isFormValid =
+    qcode.trim().length > 0 &&
+    name.trim().length > 0 &&
+    description.trim().length > 0 &&
+    entryDate.trim().length > 0 &&
+    Boolean(uom) &&
+    (isEdit ? addedStockValue >= 0 : Number(addedQty) >= 1);
+
   const adjustAddedQty = (delta: number) => {
     setAddedQty((prev) => {
       const base = Number.isFinite(Number(prev)) ? Number(prev) : 0;
@@ -92,8 +101,8 @@ export function MaterialFormModal({
     e.preventDefault();
     setErrorMsg('');
 
-    if (!qcode.trim() || !name.trim()) {
-      setErrorMsg('QCODE Material dan Nama Material wajib diisi.');
+    if (!isFormValid) {
+      setErrorMsg('Harap lengkapi semua kolom (QCODE, Nama, Deskripsi, Jumlah, Tanggal, dan UoM).');
       return;
     }
 
@@ -141,7 +150,6 @@ export function MaterialFormModal({
       aria-modal="true"
       aria-labelledby="mat-modal-title"
     >
-      {/* [ADJUSTMENT 1] Lebar & tinggi maksimal modal: ubah sm:max-w-lg / max-h-[92vh] */}
       <div className="w-full sm:max-w-lg max-h-[92vh] flex flex-col rounded-t-3xl sm:rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] shadow-2xl overflow-hidden">
         <div className="sm:hidden pt-2 pb-1 flex justify-center">
           <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-gray-700" />
@@ -149,7 +157,7 @@ export function MaterialFormModal({
 
         <div className="px-5 py-3 border-b border-[#CBD5E1] dark:border-[#374151] flex items-center justify-between gap-3">
           <h2 id="mat-modal-title" className="font-display text-base font-bold">
-            {isEdit ? 'Edit Master Material' : 'Tambah Material Baru'}
+            {isEdit ? 'Edit Master Material / Restock' : 'Tambah Material Baru'}
           </h2>
           <button
             type="button"
@@ -171,7 +179,6 @@ export function MaterialFormModal({
               >
                 QCODE Material *
               </label>
-              {/* [ADJUSTMENT 2] Tinggi input QCODE: ubah min-h-[40px] & text-sm */}
               <input
                 id="mat-qcode"
                 type="text"
@@ -190,7 +197,6 @@ export function MaterialFormModal({
               >
                 Nama Material *
               </label>
-              {/* [ADJUSTMENT 2] Tinggi input Nama Material: ubah min-h-[40px] & text-sm */}
               <input
                 id="mat-name"
                 type="text"
@@ -209,12 +215,12 @@ export function MaterialFormModal({
               htmlFor="mat-description"
               className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1"
             >
-              Deskripsi Material
+              Deskripsi Material *
             </label>
-            {/* [ADJUSTMENT 3] Tinggi area Deskripsi: ubah rows={2} & text-sm */}
             <textarea
               id="mat-description"
               rows={2}
+              required
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Tuliskan spesifikasi atau deskripsi material..."
@@ -235,20 +241,21 @@ export function MaterialFormModal({
               </div>
               <div className="min-w-0">
                 <label htmlFor="mat-added-qty" className="block text-[11px] font-bold text-[#334155] dark:text-[#D1D5DB] mb-1">
-                  Tambah Stok
+                  Tambah Stok *
                 </label>
                 <div className="flex items-center gap-1">
-                  <button type="button" onClick={() => adjustAddedQty(-1)} aria-label="Kurangi tambah stok" className="w-7 h-9 rounded-lg border border-[#CBD5E1] dark:border-[#374151] text-xs font-bold">-</button>
+                  <button type="button" onClick={() => adjustAddedQty(-1)} aria-label="Kurangi tambah stok" className="w-7 h-9 rounded-lg border border-[#CBD5E1] dark:border-[#374151] text-xs font-bold cursor-pointer">-</button>
                   <input
                     id="mat-added-qty"
                     type="number"
                     min="0"
                     step="any"
+                    required
                     value={addedQty}
                     onChange={(e) => setAddedQty(Math.max(0, Number(e.target.value) || 0))}
                     className="min-w-0 w-full h-9 px-1 rounded-lg border border-[#CBD5E1] dark:border-[#374151] bg-white dark:bg-[#090D16] text-center font-mono text-xs font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-[#15803D]"
                   />
-                  <button type="button" onClick={() => adjustAddedQty(1)} aria-label="Tambah stok" className="w-7 h-9 rounded-lg border border-[#CBD5E1] dark:border-[#374151] text-xs font-bold">+</button>
+                  <button type="button" onClick={() => adjustAddedQty(1)} aria-label="Tambah stok" className="w-7 h-9 rounded-lg border border-[#CBD5E1] dark:border-[#374151] text-xs font-bold cursor-pointer">+</button>
                 </div>
               </div>
               <div className="min-w-0">
@@ -264,7 +271,7 @@ export function MaterialFormModal({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label htmlFor="mat-added-qty" className="text-xs font-bold text-[#334155] dark:text-[#D1D5DB]">
-                  Tambah Material
+                  Jumlah Material *
                 </label>
                 <button type="button" onClick={() => setAddedQty(1)} className="text-[11px] font-semibold text-[#15803D] dark:text-[#4ADE80] hover:underline cursor-pointer">
                   Reset ke 1
@@ -272,7 +279,19 @@ export function MaterialFormModal({
               </div>
               <div className="flex items-center gap-2">
                 <button type="button" onClick={() => adjustAddedQty(-1)} aria-label="Kurangi 1" className="w-9 h-9 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-sm font-bold cursor-pointer">-</button>
-                <input id="mat-added-qty" type="number" min={1} step="any" value={addedQty} onChange={(e) => { const val = Number(e.target.value); setAddedQty(Number.isFinite(val) ? Math.max(1, val) : 1); }} className="flex-1 h-9 px-3 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-white dark:bg-[#090D16] text-center font-mono text-sm font-extrabold tabular-nums focus:outline-none focus:ring-2 focus:ring-[#15803D]" />
+                <input
+                  id="mat-added-qty"
+                  type="number"
+                  min={1}
+                  step="any"
+                  required
+                  value={addedQty}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setAddedQty(Number.isFinite(val) ? Math.max(1, val) : 1);
+                  }}
+                  className="flex-1 h-9 px-3 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-white dark:bg-[#090D16] text-center font-mono text-sm font-extrabold tabular-nums focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+                />
                 <button type="button" onClick={() => adjustAddedQty(1)} aria-label="Tambah 1" className="w-9 h-9 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-sm font-bold cursor-pointer">+</button>
               </div>
             </div>
@@ -285,12 +304,12 @@ export function MaterialFormModal({
                 htmlFor="mat-entry-date"
                 className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1"
               >
-                Tanggal Material Masuk
+                Tanggal Material Masuk *
               </label>
-              {/* [ADJUSTMENT 2] Tinggi input Tanggal: ubah min-h-[40px] & text-sm */}
               <input
                 id="mat-entry-date"
                 type="date"
+                required
                 value={entryDate}
                 onChange={(e) => setEntryDate(e.target.value)}
                 className="w-full min-h-[40px] px-3 py-1.5 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#15803D]"
@@ -302,11 +321,11 @@ export function MaterialFormModal({
                 htmlFor="mat-uom"
                 className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1"
               >
-                Unit of Measure (UoM)
+                Unit of Measure (UoM) *
               </label>
-              {/* [ADJUSTMENT 2] Tinggi select UoM: ubah min-h-[40px] & text-sm */}
               <select
                 id="mat-uom"
+                required
                 value={uom}
                 onChange={(e) => setUom(e.target.value as MaterialUnit)}
                 className="w-full min-h-[40px] px-3 py-1.5 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#15803D]"
@@ -329,7 +348,7 @@ export function MaterialFormModal({
             </div>
           )}
 
-          {/* Tombol Input Material (Hijau) */}
+          {/* Tombol Input Material (Hijau) - hanya aktif jika semua kolom terisi */}
           <div className="pt-1 flex items-center gap-2.5">
             <button
               type="button"
@@ -338,11 +357,10 @@ export function MaterialFormModal({
             >
               Batal
             </button>
-            {/* [ADJUSTMENT 5] Ukuran tombol hijau Input Material: ubah min-h-[42px] px-4 text-sm */}
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="flex-1 inline-flex items-center justify-center gap-2 min-h-[42px] px-4 rounded-xl text-sm font-bold bg-[#15803D] text-white hover:bg-green-800 dark:bg-[#16A34A] dark:text-white dark:hover:bg-green-700 transition-colors disabled:opacity-50 cursor-pointer"
+              disabled={isSubmitting || !isFormValid}
+              className="flex-1 inline-flex items-center justify-center gap-2 min-h-[42px] px-4 rounded-xl text-sm font-bold bg-[#15803D] text-white hover:bg-green-800 dark:bg-[#16A34A] dark:text-white dark:hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               <Check className="w-4 h-4 shrink-0" aria-hidden="true" />
               <span>
