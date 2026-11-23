@@ -972,7 +972,7 @@ export default function App() {
       )}
 
   <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-    </div>
+    </>
   );
 }
 
