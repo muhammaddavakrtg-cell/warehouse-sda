@@ -126,4 +126,4 @@ export function DashboardView({
               <AlertTriangle className="w-4.5 h-4.5" aria-hidden="true" />
             </div>
           </div>
-          <p className="mt-3 text-2xl sm:text-3xl font-display font-extrabold tabular-nums tracking-tight text-[#B45309] dark:
+          <p className="mt-3 text-2xl sm:text-3xl font-display font-extrabold tabular-nums tracking-tight text-[#B45309] dark:text-[#FBBF24]">
