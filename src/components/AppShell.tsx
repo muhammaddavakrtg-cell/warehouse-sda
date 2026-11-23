@@ -75,7 +75,7 @@ export function AppShell({
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white dark:bg-[#111827] border-r border-[#CBD5E1] dark:border-[#374151] z-30">
         <div className="h-16 px-5 flex items-center gap-3 border-b border-[#CBD5E1] dark:border-[#374151]">
           <img
-            src="public/krt.png"
+            src="public/logo.png"
             alt="Logo Perusahaan"
             className="w-9 h-9 rounded-xl object-contain shrink-0"
           />
