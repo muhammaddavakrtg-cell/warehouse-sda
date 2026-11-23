@@ -43,7 +43,7 @@ export function TransactionModal({
   const [materialId, setMaterialId] = useState<string>(initialMaterialId || '');
   const [materialSearch, setMaterialSearch] = useState('');
   const [quantity, setQuantity] = useState<number>(1);
-  const [party, setParty] = useState(''); // Sumber (MASUK) / Nama Pengambil (KELUAR)
+  const [party, setParty] = useState(''); // Nama Pengambil (KELUAR)
   const [usageArea, setUsageArea] = useState(''); // Area Penggunaan (KELUAR)
   const [transactionDate, setTransactionDate] = useState<string>(() => getTodayDateString());
   const [description, setDescription] = useState(''); // Deskripsi Material
@@ -71,7 +71,6 @@ export function TransactionModal({
     }
   }, [isOpen, initialType, initialMaterialId, materials]);
 
-  // Saat pindah ke Stok Keluar atau ganti material saat Stok Keluar, tampilkan deskripsi material
   useEffect(() => {
     if (!isOpen) return;
     if (type === 'KELUAR') {
@@ -92,7 +91,8 @@ export function TransactionModal({
 
   if (!isOpen) return null;
 
-  const safeQty = Number.isFinite(quantity) && quantity >= 0 ? quantity : 0;
+  const unitLabel = selectedMaterial?.unit ?? 'unit';
+  const safeQty = Number.isFinite(quantity) && quantity >= 1 ? quantity : 1;
   const currentStock = selectedMaterial ? Number(selectedMaterial.currentStock) : 0;
 
   // Proyeksi stok setelah transaksi: bisa mencapai 0 (habis), tetapi tidak boleh negatif
@@ -100,13 +100,6 @@ export function TransactionModal({
     ? type === 'MASUK'
       ? currentStock + safeQty
       : currentStock - safeQty
-    : 0;
-
-  // Jumlah yang akan diambil / masuk pada kolom kanan
-  const takenOrAddedStock = selectedMaterial
-    ? type === 'KELUAR'
-      ? Math.max(0, Math.min(currentStock, safeQty))
-      : safeQty
     : 0;
 
   const isNegativeStock = selectedMaterial !== null && type === 'KELUAR' && projectedStock < 0;
@@ -149,10 +142,8 @@ export function TransactionModal({
       );
       return;
     }
-    if (!party.trim()) {
-      setErrorMsg(
-        type === 'MASUK' ? 'Sumber wajib diisi.' : 'Nama pengambil wajib diisi.'
-      );
+    if (type === 'KELUAR' && !party.trim()) {
+      setErrorMsg('Nama pengambil wajib diisi.');
       return;
     }
     if (type === 'KELUAR' && !usageArea.trim()) {
@@ -166,8 +157,8 @@ export function TransactionModal({
         materialId: selectedMaterial.id,
         type,
         quantity: safeQty,
-        party: party.trim(),
-        pic: type === 'KELUAR' ? usageArea.trim() : party.trim(),
+        party: type === 'MASUK' ? 'Stok Masuk' : party.trim(),
+        pic: type === 'KELUAR' ? usageArea.trim() : 'Gudang',
         notes: description.trim(),
         transactionDate,
         description: description.trim(),
@@ -293,22 +284,43 @@ export function TransactionModal({
                   {selectedMaterial.location}
                 </span>
                 <span className="font-mono font-bold tabular-nums">
-                  Stok Saat Ini: {formatNumber(currentStock)} {selectedMaterial.unit}
+                  Stok Saat Ini: {formatNumber(currentStock)} {unitLabel}
                 </span>
               </div>
             )}
           </div>
 
-          {/* 3 Kolom: Kiri (Jumlah min 1 & bisa sampai habis) | Tengah (Stok Saat Ini terkunci) | Kanan (Stok yang Akan Diambil) */}
+          {/* 3 Kolom: Kiri (Stok Saat Ini terkunci) | Tengah (Stok yang Akan Masuk / Diambil) | Kanan (Nilai Aktual) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
-            {/* Kiri: Form Jumlah (minimum 1, bisa sampai habis) */}
+            {/* Kiri: Stok Saat Ini (tetap tidak bisa diklik) */}
+            <div>
+              <label
+                htmlFor="tx-current-stock"
+                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
+              >
+                Stok Saat Ini
+              </label>
+              <input
+                id="tx-current-stock"
+                type="text"
+                disabled
+                readOnly
+                tabIndex={-1}
+                value={`${formatNumber(currentStock)} ${unitLabel}`}
+                className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-slate-100 dark:bg-gray-800/80 text-center font-mono text-sm font-bold tabular-nums opacity-75 cursor-not-allowed select-none pointer-events-none"
+              />
+            </div>
+
+            {/* Tengah: Stok yang Akan Masuk / Diambil (sistem penambahan / pengambilan min 1 hingga habis) */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label
                   htmlFor="tx-qty"
                   className="text-xs font-bold text-[#334155] dark:text-[#D1D5DB]"
                 >
-                  Jumlah ({selectedMaterial?.unit ?? 'unit'})
+                  {type === 'MASUK'
+                    ? `Stok yang Akan Masuk (${unitLabel})`
+                    : `Stok yang Akan Diambil (${unitLabel})`}
                 </label>
                 <button
                   type="button"
@@ -358,115 +370,85 @@ export function TransactionModal({
                 </button>
               </div>
 
-              {/* Tulisan kecil status stok di bawah form */}
               <p className={`mt-1 text-[11px] font-semibold ${stockStatusNote.className}`}>
                 {stockStatusNote.text}
               </p>
             </div>
 
-            {/* Tengah: Form Stok Saat Ini (tetap tidak bisa diklik) */}
+            {/* Kanan: Nilai tetap aktual penambahan / pengurangan dari stok saat ini dan jumlah */}
             <div>
               <label
-                htmlFor="tx-current-stock"
+                htmlFor="tx-actual-result"
                 className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
               >
-                Stok Saat Ini
+                {type === 'MASUK' ? 'Total Stok Aktual' : 'Sisa Stok Aktual'}
               </label>
               <input
-                id="tx-current-stock"
+                id="tx-actual-result"
                 type="text"
                 disabled
                 readOnly
                 tabIndex={-1}
-                value={
-                  selectedMaterial
-                    ? `${formatNumber(currentStock)} ${selectedMaterial.unit}`
-                    : `0 ${selectedMaterial?.unit ?? 'unit'}`
-                }
-                className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-slate-100 dark:bg-gray-800/80 text-center font-mono text-sm font-bold tabular-nums opacity-75 cursor-not-allowed select-none pointer-events-none"
-              />
-            </div>
-
-            {/* Kanan: Stok yang Akan Diambil */}
-            <div>
-              <label
-                htmlFor="tx-taken-stock"
-                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
-              >
-                {type === 'KELUAR' ? 'Stok yang Akan Diambil' : 'Stok yang Akan Masuk'}
-              </label>
-              <input
-                id="tx-taken-stock"
-                type="text"
-                disabled
-                readOnly
-                tabIndex={-1}
-                value={`${formatNumber(takenOrAddedStock)} ${selectedMaterial?.unit ?? 'unit'}`}
-                className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-slate-100 dark:bg-gray-800/80 text-center font-mono text-sm font-bold tabular-nums opacity-85 cursor-not-allowed select-none pointer-events-none"
+                value={`${formatNumber(projectedStock)} ${unitLabel}`}
+                className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-slate-100 dark:bg-gray-800/80 text-center font-mono text-sm font-extrabold tabular-nums opacity-90 cursor-not-allowed select-none pointer-events-none"
               />
             </div>
           </div>
 
-          {/* Tombol cepat tambah jumlah */}
-          <div className="grid grid-cols-3 gap-2">
-            {[1, 5, 10].map((inc) => (
-              <button
-                key={inc}
-                type="button"
-                onClick={() => adjustQuantity(inc)}
-                className="min-h-[40px] rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-xs font-bold hover:border-[#1D4ED8] dark:hover:border-[#3B82F6] transition-colors cursor-pointer"
-              >
-                +{inc}
-              </button>
-            ))}
-          </div>
-
-          {/* Proyeksi Stok Akhir & Validasi Stok */}
-          {selectedMaterial && (
+          {/* Validasi Stok Habis / Tidak Cukup */}
+          {selectedMaterial && isNegativeStock && (
             <div
-              className={`p-3 rounded-xl border flex items-center justify-between text-xs sm:text-sm ${
-                isNegativeStock
-                  ? 'bg-[#FEE2E2] text-[#B91C1C] border-[#FCA5A5] dark:bg-[#7F1D1D] dark:text-[#F87171] dark:border-[#991B1B]'
-                  : 'bg-[#F8FAFC] text-[#0F172A] border-[#CBD5E1] dark:bg-[#090D16] dark:text-[#F9FAFB] dark:border-[#374151]'
-              }`}
+              role="alert"
+              className="p-3 rounded-xl border flex items-center justify-between text-xs sm:text-sm bg-[#FEE2E2] text-[#B91C1C] border-[#FCA5A5] dark:bg-[#7F1D1D] dark:text-[#F87171] dark:border-[#991B1B]"
             >
               <span className="font-semibold flex items-center gap-1.5">
-                {isNegativeStock && <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />}
-                <span>
-                  {isNegativeStock
-                    ? 'Stok Tidak Cukup!'
-                    : projectedStock === 0
-                      ? 'Stok Akan Habis (0)'
-                      : 'Proyeksi Stok Akhir'}
-                </span>
+                <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>Stok Tidak Cukup!</span>
               </span>
               <span className="font-mono font-bold tabular-nums">
-                {formatNumber(currentStock)} → {formatNumber(projectedStock)} {selectedMaterial.unit}
+                Tersedia {formatNumber(currentStock)} {unitLabel}
               </span>
             </div>
           )}
 
-          {/* Baris Sumber / Nama Pengambil, Area Penggunaan (Keluar), & Tanggal Material Masuk/Keluar */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Kolom Input Sesuai Jenis Pergerakan */}
+          {type === 'MASUK' ? (
             <div>
               <label
-                htmlFor="tx-party"
+                htmlFor="tx-date-in"
                 className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
               >
-                {type === 'MASUK' ? 'Sumber *' : 'Nama Pengambil *'}
+                Tanggal Material Masuk *
               </label>
               <input
-                id="tx-party"
-                type="text"
+                id="tx-date-in"
+                type="date"
                 required
-                value={party}
-                onChange={(e) => setParty(e.target.value)}
-                placeholder={type === 'MASUK' ? 'Contoh: PT Sinar Baja' : 'Contoh: Budi Santoso'}
+                value={transactionDate}
+                onChange={(e) => setTransactionDate(e.target.value)}
                 className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
               />
             </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label
+                  htmlFor="tx-taker-name"
+                  className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
+                >
+                  Nama Pengambil *
+                </label>
+                <input
+                  id="tx-taker-name"
+                  type="text"
+                  required
+                  value={party}
+                  onChange={(e) => setParty(e.target.value)}
+                  placeholder="Contoh: Budi Santoso"
+                  className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
+                />
+              </div>
 
-            {type === 'KELUAR' ? (
               <div>
                 <label
                   htmlFor="tx-usage-area"
@@ -480,20 +462,20 @@ export function TransactionModal({
                   required
                   value={usageArea}
                   onChange={(e) => setUsageArea(e.target.value)}
-                  placeholder="Contoh: Line Produksi A / Area Gudang"
+                  placeholder="Contoh: Line Produksi A"
                   className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
                 />
               </div>
-            ) : (
+
               <div>
                 <label
-                  htmlFor="tx-date"
+                  htmlFor="tx-date-out"
                   className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
                 >
-                  Tanggal Material Masuk *
+                  Tanggal Material Keluar *
                 </label>
                 <input
-                  id="tx-date"
+                  id="tx-date-out"
                   type="date"
                   required
                   value={transactionDate}
@@ -501,26 +483,6 @@ export function TransactionModal({
                   className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
                 />
               </div>
-            )}
-          </div>
-
-          {/* Pada Stok Keluar, Tanggal Material Keluar diletakkan di bawah / berdampingan */}
-          {type === 'KELUAR' && (
-            <div>
-              <label
-                htmlFor="tx-date-out"
-                className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1.5"
-              >
-                Tanggal Material Keluar *
-              </label>
-              <input
-                id="tx-date-out"
-                type="date"
-                required
-                value={transactionDate}
-                onChange={(e) => setTransactionDate(e.target.value)}
-                className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-sm focus:outline-none focus:ring-2 focus:ring-[#1D4ED8] dark:focus:ring-[#3B82F6]"
-              />
             </div>
           )}
 
