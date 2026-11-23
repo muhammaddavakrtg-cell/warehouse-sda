@@ -50,6 +50,7 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
   const [isRegistering, setIsRegistering] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState('');
+  const [popupMsg, setPopupMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState(() => {
     try {
       if (window.sessionStorage.getItem('gudang-idle-logout')) {
@@ -138,7 +139,7 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
 
           if (role && group === 'staff' && !isStaffGroup) {
             await supabase.auth.signOut();
-            setErrorMsg('Akun ini bukan Admin/Staf. Silakan pilih tab Karyawan.');
+            setPopupMs('Akun ini bukan Admin/Staf. Silakan pilih tab Karyawan.');
           } else if (role && group === 'employee' && isStaffGroup) {
             await supabase.auth.signOut();
             setErrorMsg('Akun ini Admin/Staf. Silakan pilih tab Admin & Staf.');
@@ -367,7 +368,7 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label htmlFor="login-username" className={LABEL_CLASS}>
-                Username
+                Username / E-mail
               </label>
               <input
                 id="login-username"
@@ -376,7 +377,7 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
                 autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Masukkan username Anda"
+                placeholder="Masukkan username atau e-mail Anda"
                 className={INPUT_CLASS}
               />
             </div>
@@ -573,7 +574,31 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
             </button>
           </form>
         )}
+                )}
       </div>
+
+      {popupMsg && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/50"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 text-center shadow-xl">
+            <h2 className="text-lg font-bold mb-2">Perhatian</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-5">{popupMsg}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setPopupMsg('');
+                switchGroup('employee');
+              }}
+              className={PRIMARY_BTN_CLASS}
+            >
+              Login Akun Karyawan
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
