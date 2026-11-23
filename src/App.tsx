@@ -557,12 +557,6 @@ export default function App() {
         },
         ...prev,
       ]);
-      await fetchWarehouseData();
-      pushToast('success', 'Material berhasil ditambahkan', `${created.sku} — ${created.name}`);
-    },
-    [assertCanEdit, fetchWarehouseData, pushToast]
-  );
-
   const handleUpdateMaterial = useCallback(
     async (
       id: string,
