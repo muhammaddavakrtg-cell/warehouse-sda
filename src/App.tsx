@@ -428,6 +428,7 @@ export default function App() {
           .insert({
             material_id: target.id,
             material_sku: input.sku.trim(),
+            material_name: input.name.trim(),
             material_unit: input.unit,
             type: 'MASUK',
             quantity: addedStock,
@@ -518,6 +519,7 @@ export default function App() {
         .insert({
           material_id: target.id,
           material_sku: target.sku,
+          material_name: target.name,
           material_unit: target.unit,
           type: payload.type,
           quantity: qty,
