@@ -8,6 +8,20 @@ interface LoginViewProps {
 
 const FALLBACK_DOMAIN = 'gudang.local';
 
+type Mode = 'login' | 'forgot' | 'register';
+
+// Catat aktivitas (login, daftar) ke tabel activity_logs lewat fungsi log_activity
+const recordActivity = async (event: string) => {
+  try {
+    await supabase?.rpc('log_activity', {
+      p_event: event,
+      p_user_agent: navigator.userAgent,
+    });
+  } catch {
+    // abaikan jika pencatatan gagal
+  }
+};
+
 const INPUT_CLASS =
   'w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500';
 const LABEL_CLASS = 'block text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-300';
@@ -15,7 +29,7 @@ const PRIMARY_BTN_CLASS =
   'w-full py-2.5 px-4 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white transition cursor-pointer';
 
 export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
-  const [mode, setMode] = useState<'login' | 'forgot' | 'register'>('login');
+  const [mode, setMode] = useState<Mode>('login');
 
   // Bagian login: 'staff' = Admin & Staf, 'employee' = Karyawan
   const [group, setGroup] = useState<'staff' | 'employee'>('staff');
@@ -36,9 +50,19 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
   const [isRegistering, setIsRegistering] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState('');
-  const [infoMsg, setInfoMsg] = useState('');
+  const [infoMsg, setInfoMsg] = useState(() => {
+    try {
+      if (window.sessionStorage.getItem('gudang-idle-logout')) {
+        window.sessionStorage.removeItem('gudang-idle-logout');
+        return 'Anda keluar otomatis karena lama tidak aktif. Silakan masuk kembali.';
+      }
+    } catch {
+      // abaikan jika penyimpanan tidak tersedia
+    }
+    return '';
+  });
 
-  const goToMode = (next: 'login' | 'forgot' | 'register') => {
+  const goToMode = (next: Mode) => {
     setErrorMsg('');
     setInfoMsg('');
     setMode(next);
@@ -118,6 +142,8 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
           } else if (role && group === 'employee' && isStaffGroup) {
             await supabase.auth.signOut();
             setErrorMsg('Akun ini Admin/Staf. Silakan pilih tab Admin & Staf.');
+          } else {
+            await recordActivity('LOGIN');
           }
         }
       }
@@ -179,6 +205,7 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
         email: cleanEmail,
         password: regPassword,
         options: {
+          emailRedirectTo: `${window.location.origin}/`,
           data: {
             username: cleanUsername,
             full_name: cleanName || cleanUsername,
@@ -200,15 +227,16 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
 
       if (data.session) {
         // Konfirmasi email nonaktif: user otomatis masuk, App.tsx akan menampilkan dashboard.
+        await recordActivity('REGISTER');
         return;
       }
 
-      // Konfirmasi email aktif: user harus klik tautan di emailnya dulu.
+      // Konfirmasi email aktif: user harus klik tautan aktivasi di emailnya dulu.
       setMode('login');
       setGroup('employee');
       setUsername(cleanUsername);
       setInfoMsg(
-        `Pendaftaran berhasil. Kami mengirim tautan konfirmasi ke ${cleanEmail}. Buka email tersebut (cek juga folder Spam), lalu masuk di sini.`
+        `Pendaftaran berhasil. Kami mengirim tautan aktivasi ke ${cleanEmail}. Buka email tersebut (cek juga folder Spam), klik tautan aktivasinya, lalu masuk di sini.`
       );
     } catch (err: any) {
       setErrorMsg(err?.message || 'Terjadi kesalahan saat mendaftar.');

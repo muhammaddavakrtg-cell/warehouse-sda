@@ -88,6 +88,19 @@ export interface UserProfile {
   avatarUrl?: string;
 }
 
+export type ActivityEvent = 'LOGIN' | 'LOGOUT' | 'LOGOUT_IDLE' | 'REGISTER';
+
+export interface ActivityLog {
+  id: string;
+  userId: string;
+  username: string;
+  fullName: string;
+  role: string;
+  event: string;
+  userAgent: string;
+  createdAt: string;
+}
+
 export function getAccessRoleLabel(role?: string): string {
   switch (role) {
     case 'admin':

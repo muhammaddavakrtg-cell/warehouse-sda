@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
+import { ActivityLogPanel } from './components/ActivityLogPanel';
 import { AppShell, type NavTab } from './components/AppShell';
 import { DashboardView } from './components/DashboardView';
 import { LoginView } from './components/LoginView';
 import { LogbookView } from './components/LogbookView';
 import { MaterialFormModal } from './components/MaterialFormModal';
 import { MaterialsView } from './components/MaterialsView';
+import type { NotificationItem } from './components/NotificationBell';
 import { ProfilePanel } from './components/ProfilePanel';
 import { UserManagementPanel } from './components/UserManagementPanel';
 import { ToastContainer } from './components/ToastContainer';
 import { TransactionModal } from './components/TransactionModal';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import {
+  getAccessRoleLabel,
   type AccessLevel,
   type CreateMaterialInput,
   type Material,
@@ -57,6 +60,9 @@ function mapLogRow(row: any): StockLog {
     createdAt: row.created_at,
   };
 }
+
+// Batas waktu tidak aktif sebelum otomatis logout (dalam menit)
+const IDLE_LIMIT_MINUTES = 30;
 
 export default function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -249,14 +255,70 @@ export default function App() {
     fetchWarehouseData();
   }, [fetchWarehouseData]);
 
-  const handleLogout = useCallback(async () => {
+  const handleLogout = useCallback(async (event: 'LOGOUT' | 'LOGOUT_IDLE' = 'LOGOUT') => {
     if (supabase) {
+      try {
+        // Catat aktivitas keluar sebelum sesi ditutup
+        await supabase.rpc('log_activity', {
+          p_event: event,
+          p_user_agent: navigator.userAgent,
+        });
+      } catch {
+        // abaikan jika pencatatan gagal, logout tetap dilanjutkan
+      }
       await supabase.auth.signOut();
     }
     setSession(null);
     setProfile(null);
     setActiveTab('dashboard');
   }, []);
+
+  // Logout otomatis jika tidak ada aktivitas (ubah angka menit di bawah sesuai kebutuhan)
+  useEffect(() => {
+    if (!session) return;
+
+    const IDLE_LIMIT_MS = IDLE_LIMIT_MINUTES * 60 * 1000;
+    let lastActivity = Date.now();
+
+    const markActive = () => {
+      lastActivity = Date.now();
+    };
+
+    const checkIdle = () => {
+      if (Date.now() - lastActivity >= IDLE_LIMIT_MS) {
+        try {
+          window.sessionStorage.setItem('gudang-idle-logout', '1');
+        } catch {
+          // abaikan jika penyimpanan tidak tersedia
+        }
+        handleLogout('LOGOUT_IDLE');
+      }
+    };
+
+    const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+    events.forEach((ev) => window.addEventListener(ev, markActive, { passive: true }));
+    document.addEventListener('visibilitychange', checkIdle);
+    const intervalId = window.setInterval(checkIdle, 15000);
+
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, markActive));
+      document.removeEventListener('visibilitychange', checkIdle);
+      window.clearInterval(intervalId);
+    };
+  }, [session, handleLogout]);
+
+  const notifications = useMemo<NotificationItem[]>(() => {
+    return materials
+      .map((m) => ({ m, status: getStockStatus(m.currentStock, m.minStock) }))
+      .filter((x) => x.status !== 'AMAN')
+      .sort((a, b) => (a.status === b.status ? 0 : a.status === 'HABIS' ? -1 : 1))
+      .map(({ m, status }) => ({
+        id: m.id,
+        title: m.name,
+        description: `${status === 'HABIS' ? 'Stok habis' : 'Stok menipis'}: ${m.currentStock} ${m.unit} (min. ${m.minStock})`,
+        level: status === 'HABIS' ? ('HABIS' as const) : ('MENIPIS' as const),
+      }));
+  }, [materials]);
 
   const criticalCount = useMemo(
     () => materials.filter((m) => getStockStatus(m.currentStock, m.minStock) !== 'AMAN').length,
@@ -479,7 +541,12 @@ export default function App() {
         onOpenTransaction={(type) => handleOpenTransaction(type)}
         criticalCount={criticalCount}
         canEdit={canEdit}
-         canManageUsers={profile?.role === 'admin' || profile?.role === 'staff'}
+        canManageUsers={profile?.role === 'admin' || profile?.role === 'staff'}
+        userName={profile?.fullName || profile?.username || session.user.email || ''}
+        roleLabel={getAccessRoleLabel(profile?.role)}
+        onLogout={() => handleLogout()}
+        notifications={notifications}
+        onOpenNotifications={() => handleNavigateMaterials('ALL')}
       >
         {loadError && (
           <div
@@ -544,6 +611,9 @@ export default function App() {
         )}
 
         {activeTab === 'logbook' && <LogbookView logs={logs} />}
+        {activeTab === 'activity' && (profile?.role === 'admin' || profile?.role === 'staff') && (
+          <ActivityLogPanel profile={profile} onNotify={pushToast} />
+        )}
                 {activeTab === 'users' && (
           <UserManagementPanel profile={profile} onNotify={pushToast} />
         )}

@@ -18,12 +18,14 @@ import {
   isToday,
   sortMaterialsByUrgency,
 } from '../utils/warehouse';
+import { ClockCalendarCard } from './ClockCalendarCard';
 import { StockStatusBadge, TransactionBadge } from './StatusBadge';
 
 interface DashboardViewProps {
   materials: Material[];
   logs: StockLog[];
   isLoading: boolean;
+  canEdit?: boolean;
   onQuickTransaction: (type: TransactionType, materialId?: string) => void;
   onNavigateMaterials: (statusFilter?: StockStatus | 'ALL') => void;
   onNavigateLogbook: () => void;
@@ -265,10 +267,14 @@ export function DashboardView({
           )}
         </section>
 
-        {/* Recent Audit Trail Panel (5 cols on XL) */}
+        {/* Kolom kanan (5 kolom di XL): Jam & Kalender + Aktivitas Terbaru */}
+        <div className="xl:col-span-5 space-y-6">
+        <ClockCalendarCard />
+
+        {/* Recent Audit Trail Panel */}
         <section
           aria-label="Aktivitas Terbaru"
-          className="xl:col-span-5 rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] overflow-hidden"
+          className="rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] overflow-hidden"
         >
           <div className="px-5 py-4 border-b border-[#CBD5E1] dark:border-[#374151] flex items-center justify-between gap-4">
             <div>
@@ -331,6 +337,7 @@ export function DashboardView({
             </div>
           )}
         </section>
+        </div>
       </div>
     </div>
   );
