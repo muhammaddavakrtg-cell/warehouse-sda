@@ -84,13 +84,13 @@ export function AppShell({
     <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#090D16] text-[#0F172A] dark:text-[#F9FAFB] flex flex-col lg:flex-row">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white dark:bg-[#111827] border-r border-[#CBD5E1] dark:border-[#374151] z-30">
-        <div className="h-16 px-5 flex items-center gap-3 border-b border-[#CBD5E1] dark:border-[#374151]">
+        <div className="min-h-16 py-3 px-5 flex items-center gap-3 border-b border-[#CBD5E1] dark:border-[#374151]">
           <img
             src="/logo.png"
             alt="Logo Perusahaan"
-            className="w-9 h-9 rounded-xl object-contain shrink-0"
+            className="w-10 h-10 rounded-xl object-contain shrink-0"
           />
-          <span className="font-display text-lg font-extrabold tracking-tight whitespace-nowrap truncate">
+          <span className="font-display text-base font-extrabold tracking-tight leading-snug break-words">
             Inventory Material SD Plant
           </span>
         </div>
@@ -284,7 +284,7 @@ export function AppShell({
       )}
 
       {/* Mobile Compact Sticky Top Bar */}
-      <header className="lg:hidden sticky top-0 z-30 h-14 px-3 flex items-center justify-between bg-white/95 dark:bg-[#111827]/95 backdrop-blur-md border-b border-[#CBD5E1] dark:border-[#374151]">
+      <header className="lg:hidden sticky top-0 z-30 h-14 px-3 flex items-center justify-between gap-2 bg-white/95 dark:bg-[#111827]/95 backdrop-blur-md border-b border-[#CBD5E1] dark:border-[#374151]">
         <div className="flex items-center gap-2 min-w-0">
           <button
             type="button"
@@ -294,9 +294,24 @@ export function AppShell({
           >
             <Menu className="w-5 h-5" aria-hidden="true" />
           </button>
-          <span className="font-display font-bold text-base truncate">{currentTitle}</span>
+
+          <img
+            src="public/logo.png"
+            alt="Logo Perusahaan"
+            className="w-7 h-7 rounded-lg object-contain shrink-0"
+          />
+
+          <div className="min-w-0 leading-tight">
+            <p className="font-display text-xs font-extrabold tracking-tight truncate">
+              Inventory Material SD Plant
+            </p>
+            <p className="text-[11px] font-semibold text-[#334155] dark:text-[#D1D5DB] truncate">
+              {currentTitle}
+            </p>
+          </div>
+
           {activeTab === 'dashboard' && (
-            <div className="relative flex items-center gap-1">
+            <div className="relative flex items-center gap-1 shrink-0">
               <NotificationBell items={notifications} onViewAll={onOpenNotifications} />
               <button
                 type="button"
