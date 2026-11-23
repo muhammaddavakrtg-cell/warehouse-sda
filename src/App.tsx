@@ -347,18 +347,18 @@ export default function App() {
       }
 
       const { data, error } = await supabase
-  .from('materials')
-  .insert({
-    sku: input.sku.trim(),
-    name: input.name.trim(),
-    category: input.category.trim(),
-    unit: input.unit.trim(),
-    current_stock: Number(input.currentStock ?? 0),
-    description: input.description?.trim() || '',
-    min_stock: Number(input.minStock ?? 0),
-  })
-  .select()
-  .single();
+        .from('materials')
+        .insert({
+          sku: input.sku.trim(),
+          name: input.name.trim(),
+          category: input.category.trim(),
+          unit: input.unit.trim(),
+          current_stock: Number(input.currentStock ?? 0),
+          description: input.description?.trim() || '',
+          min_stock: Number(input.minStock ?? 0),
+        })
+        .select()
+        .single();
 
       if (error) {
         throw new Error(error.message || 'Gagal menambahkan material.');
@@ -372,7 +372,14 @@ export default function App() {
   );
 
   const handleUpdateMaterial = useCallback(
-    async (id: string, input: UpdateMaterialInput) => {
+    async (
+      id: string,
+      input: UpdateMaterialInput & {
+        description?: string;
+        entryDate?: string;
+        addedStock?: number;
+      }
+    ) => {
       assertCanEdit();
 
       if (!supabase) {
@@ -380,6 +387,13 @@ export default function App() {
           'Konfigurasi Supabase belum terbaca (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).'
         );
       }
+
+      const target = materials.find((material) => material.id === id);
+      if (!target) throw new Error('Material tidak ditemukan.');
+
+      const addedStock = Math.max(0, Number(input.addedStock) || 0);
+      const stockBefore = Number(target.currentStock) || 0;
+      const stockAfter = stockBefore + addedStock;
 
       const { data, error } = await supabase
         .from('materials')
@@ -389,6 +403,8 @@ export default function App() {
           category: input.category.trim(),
           unit: input.unit.trim(),
           min_stock: Number(input.minStock ?? 0),
+          description: input.description?.trim() || '',
+          current_stock: stockAfter,
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
@@ -399,11 +415,47 @@ export default function App() {
         throw new Error(error.message || 'Gagal memperbarui material.');
       }
 
+      // Catat penambahan sebagai transaksi MASUK agar muncul di Logbook.
+      if (addedStock > 0) {
+        const { error: logError } = await supabase
+          .from('stock_logs')
+          .insert({
+            material_id: target.id,
+            material_sku: input.sku.trim(),
+            material_name: input.name.trim(),
+            material_unit: input.unit,
+            type: 'MASUK',
+            quantity: addedStock,
+            stock_before: stockBefore,
+            stock_after: stockAfter,
+            party: 'Penambahan melalui Edit Material',
+            pic:
+              profile?.fullName ||
+              profile?.username ||
+              session?.user?.email?.split('@')[0] ||
+              'Staf Gudang',
+            notes: 'Penambahan stok melalui menu Edit Material',
+          });
+
+        if (logError) {
+          // Stok sudah ter-update; tampilkan pesan eksplisit agar kegagalan log tidak tersembunyi.
+          throw new Error(
+            `Stok berhasil diperbarui menjadi ${stockAfter} ${input.unit}, tetapi riwayat transaksi gagal disimpan: ${logError.message}`
+          );
+        }
+      }
+
       const updated = mapMaterialRow(data);
       await fetchWarehouseData();
-      pushToast('success', 'Data material diperbarui', `${updated.sku} — ${updated.name}`);
+      pushToast(
+        'success',
+        'Material berhasil diperbarui',
+        addedStock > 0
+          ? `${updated.name}: ${stockBefore} + ${addedStock} = ${stockAfter} ${updated.unit}`
+          : `${updated.sku} — ${updated.name}`
+      );
     },
-    [assertCanEdit, fetchWarehouseData, pushToast]
+    [assertCanEdit, materials, profile, session, fetchWarehouseData, pushToast]
   );
 
   const handleSubmitTransaction = useCallback(
@@ -457,22 +509,22 @@ export default function App() {
       const descriptionValue = payload.description?.trim() || payload.notes?.trim() || '';
 
       const { data: logRow, error: logErr } = await supabase
-  .from('stock_logs')
-  .insert({
-    material_id: target.id,
-    material_sku: target.sku,
-    material_name: target.name,
-    material_unit: target.unit,
-    type: payload.type,
-    quantity: qty,
-    stock_before: stockBefore,
-    stock_after: stockAfter,
-    party: partyValue,
-    pic: picValue,
-    notes: descriptionValue,
-  })
-  .select()
-  .single();
+        .from('stock_logs')
+        .insert({
+          material_id: target.id,
+          material_sku: target.sku,
+          material_name: target.name,
+          material_unit: target.unit,
+          type: payload.type,
+          quantity: qty,
+          stock_before: stockBefore,
+          stock_after: stockAfter,
+          party: partyValue,
+          pic: picValue,
+          notes: descriptionValue,
+        })
+        .select()
+        .single();
 
       if (logErr) {
         throw new Error(logErr.message || 'Gagal mencatat logbook transaksi.');

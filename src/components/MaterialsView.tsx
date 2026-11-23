@@ -1,7 +1,5 @@
 import { useMemo, useState } from 'react';
 import {
-  ArrowDownLeft,
-  ArrowUpRight,
   Boxes,
   Edit3,
   FileSpreadsheet,
@@ -280,31 +278,14 @@ export function MaterialsView({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onQuickTransaction('MASUK', item.id)}
-                      className="inline-flex items-center justify-center gap-1 min-h-[44px] px-2 rounded-xl text-xs font-bold border border-[#86EFAC] bg-[#DCFCE7] text-[#15803D] dark:border-[#166534] dark:bg-[#14532D] dark:text-[#4ADE80] cursor-pointer"
-                    >
-                      <ArrowDownLeft className="w-4 h-4 shrink-0" aria-hidden="true" />
-                      <span>Masuk</span>
-                    </button>
-                    <button
-                      type="button"
-                      disabled={item.currentStock <= 0}
-                      onClick={() => onQuickTransaction('KELUAR', item.id)}
-                      className="inline-flex items-center justify-center gap-1 min-h-[44px] px-2 rounded-xl text-xs font-bold border border-[#FDBA74] bg-[#FFEDD5] text-[#C2410C] dark:border-[#9A3412] dark:bg-[#431407] dark:text-[#FB923C] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden="true" />
-                      <span>Keluar</span>
-                    </button>
+                  <div>
                     <button
                       type="button"
                       onClick={() => onEditMaterial(item)}
-                      className="inline-flex items-center justify-center gap-1 min-h-[44px] px-2 rounded-xl text-xs font-bold border border-[#CBD5E1] dark:border-[#374151] text-[#0F172A] dark:text-[#F9FAFB] hover:bg-slate-100 dark:hover:bg-gray-800 cursor-pointer"
+                      className="w-full inline-flex items-center justify-center gap-2 min-h-[38px] px-3 rounded-lg text-xs font-bold border border-[#CBD5E1] dark:border-[#374151] text-[#0F172A] dark:text-[#F9FAFB] hover:bg-slate-100 dark:hover:bg-gray-800 cursor-pointer"
                     >
                       <Edit3 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                      <span>Edit</span>
+                      <span>Edit Material & Stok</span>
                     </button>
                   </div>
                 </article>
@@ -324,7 +305,7 @@ export function MaterialsView({
                     <th className="py-3.5 px-4 text-right whitespace-nowrap">Stok Saat Ini</th>
                     <th className="py-3.5 px-4 text-right whitespace-nowrap">Min. Stok</th>
                     <th className="py-3.5 px-4 whitespace-nowrap">Status</th>
-                    <th className="py-3.5 px-4 text-right whitespace-nowrap">Aksi Cepat</th>
+                    <th className="py-3.5 px-4 text-right whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#CBD5E1] dark:divide-[#374151] text-sm">
@@ -362,31 +343,13 @@ export function MaterialsView({
                           <StockStatusBadge status={status} />
                         </td>
                         <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                          <div className="inline-flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => onQuickTransaction('MASUK', item.id)}
-                              title="Catat Stok Masuk"
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border border-[#86EFAC] bg-[#DCFCE7] text-[#15803D] hover:brightness-95 dark:border-[#166534] dark:bg-[#14532D] dark:text-[#4ADE80] cursor-pointer"
-                            >
-                              <ArrowDownLeft className="w-3.5 h-3.5" aria-hidden="true" />
-                              <span>Masuk</span>
-                            </button>
-                            <button
-                              type="button"
-                              disabled={item.currentStock <= 0}
-                              onClick={() => onQuickTransaction('KELUAR', item.id)}
-                              title="Catat Stok Keluar"
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border border-[#FDBA74] bg-[#FFEDD5] text-[#C2410C] hover:brightness-95 dark:border-[#9A3412] dark:bg-[#431407] dark:text-[#FB923C] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                            >
-                              <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
-                              <span>Keluar</span>
-                            </button>
+                          <div className="inline-flex items-center justify-end">
                             <button
                               type="button"
                               onClick={() => onEditMaterial(item)}
+                              title="Edit Material dan Tambah Stok"
                               aria-label={`Edit ${item.name}`}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-[#CBD5E1] dark:border-[#374151] text-[#334155] dark:text-[#D1D5DB] hover:bg-slate-100 dark:hover:bg-gray-800 hover:text-[#0F172A] dark:hover:text-[#F9FAFB] cursor-pointer"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-[#CBD5E1] dark:border-[#374151] text-[#334155] dark:text-[#D1D5DB] hover:bg-slate-100 dark:hover:bg-gray-800 cursor-pointer"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>

@@ -20,6 +20,7 @@ interface MaterialFormModalProps {
     input: UpdateMaterialInput & {
       description?: string;
       entryDate?: string;
+      addedStock?: number;
     }
   ) => Promise<void>;
 }
@@ -44,7 +45,7 @@ export function MaterialFormModal({
   const [qcode, setQcode] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [addedQty, setAddedQty] = useState<number>(1);
+  const [addedQty, setAddedQty] = useState<number>(0);
   const [entryDate, setEntryDate] = useState<string>(() => getTodayDateString());
   const [uom, setUom] = useState<MaterialUnit>('pcs');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,7 +57,7 @@ export function MaterialFormModal({
         setQcode(editingMaterial.sku);
         setName(editingMaterial.name);
         setDescription((editingMaterial as any).description ?? '');
-        setAddedQty(Math.max(1, Number(editingMaterial.currentStock) || 1));
+        setAddedQty(0);
         setEntryDate(
           (editingMaterial as any).entryDate?.slice(0, 10) ||
             editingMaterial.createdAt?.slice(0, 10) ||
@@ -78,11 +79,12 @@ export function MaterialFormModal({
   if (!isOpen) return null;
 
   const isEdit = Boolean(editingMaterial);
+  const addedStockValue = Math.max(0, Number(addedQty) || 0);
 
   const adjustAddedQty = (delta: number) => {
     setAddedQty((prev) => {
-      const base = Number.isFinite(Number(prev)) ? Number(prev) : 1;
-      return Math.max(1, base + delta);
+      const base = Number.isFinite(Number(prev)) ? Number(prev) : 0;
+      return Math.max(isEdit ? 0 : 1, base + delta);
     });
   };
 
@@ -109,6 +111,7 @@ export function MaterialFormModal({
           location: editingMaterial.location || '-',
           description: description.trim(),
           entryDate,
+          addedStock: addedStockValue,
         });
       } else {
         await onCreate({
@@ -219,54 +222,58 @@ export function MaterialFormModal({
             />
           </div>
 
-          {/* 4. Tombol tambah material (kontrol jumlah) */}
-          {!isEdit && (
+          {/* 4. Pengaturan stok */}
+          {isEdit ? (
+            <div className="grid grid-cols-3 gap-2">
+              <div className="min-w-0">
+                <label className="block text-[11px] font-bold text-[#334155] dark:text-[#D1D5DB] mb-1">
+                  Stok Saat Ini
+                </label>
+                <div className="h-9 flex items-center justify-center rounded-lg border border-[#CBD5E1] dark:border-[#374151] bg-[#F1F5F9] dark:bg-[#090D16] font-mono text-xs font-bold tabular-nums">
+                  {Number(editingMaterial?.currentStock) || 0} {uom}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <label htmlFor="mat-added-qty" className="block text-[11px] font-bold text-[#334155] dark:text-[#D1D5DB] mb-1">
+                  Tambah Stok
+                </label>
+                <div className="flex items-center gap-1">
+                  <button type="button" onClick={() => adjustAddedQty(-1)} aria-label="Kurangi tambah stok" className="w-7 h-9 rounded-lg border border-[#CBD5E1] dark:border-[#374151] text-xs font-bold">-</button>
+                  <input
+                    id="mat-added-qty"
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={addedQty}
+                    onChange={(e) => setAddedQty(Math.max(0, Number(e.target.value) || 0))}
+                    className="min-w-0 w-full h-9 px-1 rounded-lg border border-[#CBD5E1] dark:border-[#374151] bg-white dark:bg-[#090D16] text-center font-mono text-xs font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-[#15803D]"
+                  />
+                  <button type="button" onClick={() => adjustAddedQty(1)} aria-label="Tambah stok" className="w-7 h-9 rounded-lg border border-[#CBD5E1] dark:border-[#374151] text-xs font-bold">+</button>
+                </div>
+              </div>
+              <div className="min-w-0">
+                <label className="block text-[11px] font-bold text-green-700 dark:text-green-400 mb-1">
+                  Aktual Stok
+                </label>
+                <div className="h-9 flex items-center justify-center rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950 font-mono text-xs font-bold text-green-700 dark:text-green-400 tabular-nums">
+                  {(Number(editingMaterial?.currentStock) || 0) + addedStockValue} {uom}
+                </div>
+              </div>
+            </div>
+          ) : (
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label
-                  htmlFor="mat-added-qty"
-                  className="text-xs font-bold text-[#334155] dark:text-[#D1D5DB]"
-                >
+                <label htmlFor="mat-added-qty" className="text-xs font-bold text-[#334155] dark:text-[#D1D5DB]">
                   Tambah Material
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setAddedQty(1)}
-                  className="text-[11px] font-semibold text-[#15803D] dark:text-[#4ADE80] hover:underline cursor-pointer"
-                >
+                <button type="button" onClick={() => setAddedQty(1)} className="text-[11px] font-semibold text-[#15803D] dark:text-[#4ADE80] hover:underline cursor-pointer">
                   Reset ke 1
                 </button>
               </div>
-              {/* [ADJUSTMENT 4] Ukuran tombol +/- & input jumlah: ubah h-9 / text-sm */}
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => adjustAddedQty(-1)}
-                  aria-label="Kurangi 1"
-                  className="w-9 h-9 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-sm font-bold hover:bg-slate-200 dark:hover:bg-gray-800 cursor-pointer shrink-0"
-                >
-                  -
-                </button>
-                <input
-                  id="mat-added-qty"
-                  type="number"
-                  min={1}
-                  step="any"
-                  value={addedQty}
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    setAddedQty(Number.isFinite(val) ? Math.max(1, val) : 1);
-                  }}
-                  className="flex-1 h-9 px-3 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-white dark:bg-[#090D16] text-center font-mono text-sm font-extrabold tabular-nums focus:outline-none focus:ring-2 focus:ring-[#15803D]"
-                />
-                <button
-                  type="button"
-                  onClick={() => adjustAddedQty(1)}
-                  aria-label="Tambah 1"
-                  className="w-9 h-9 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-sm font-bold hover:bg-slate-200 dark:hover:bg-gray-800 cursor-pointer shrink-0"
-                >
-                  +
-                </button>
+                <button type="button" onClick={() => adjustAddedQty(-1)} aria-label="Kurangi 1" className="w-9 h-9 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-sm font-bold cursor-pointer">-</button>
+                <input id="mat-added-qty" type="number" min={1} step="any" value={addedQty} onChange={(e) => { const val = Number(e.target.value); setAddedQty(Number.isFinite(val) ? Math.max(1, val) : 1); }} className="flex-1 h-9 px-3 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-white dark:bg-[#090D16] text-center font-mono text-sm font-extrabold tabular-nums focus:outline-none focus:ring-2 focus:ring-[#15803D]" />
+                <button type="button" onClick={() => adjustAddedQty(1)} aria-label="Tambah 1" className="w-9 h-9 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] font-mono text-sm font-bold cursor-pointer">+</button>
               </div>
             </div>
           )}
