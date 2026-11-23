@@ -92,4 +92,20 @@ export default function App() {
   const [txInitialMaterialId, setTxInitialMaterialId] = useState<string | undefined>(undefined);
 
   const [matModalOpen, setMatModalOpen] = useState(false);
-  const [editing
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const pushToast = useCallback(
+    (variant: ToastMessage['variant'], title: string, description?: string) => {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      setToasts((prev) => [...prev, { id, variant, title, description }]);
+      window.setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 4500);
+    },
+    []
+  );
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t
