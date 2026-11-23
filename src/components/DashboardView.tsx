@@ -176,9 +176,10 @@ export function DashboardView({
       {/* Main Content Split: Critical Restock Queue & Recent Audit Log */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
         {/* Critical Stock Panel (7 cols on XL) */}
+        <div className="xl:col-span-7 space-y-6">
         <section
           aria-label="Material Kritis"
-          className="xl:col-span-7 rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] overflow-hidden"
+          className="rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] overflow-hidden"
         >
           <div className="px-5 py-4 border-b border-[#CBD5E1] dark:border-[#374151] flex items-center justify-between gap-4">
             <div>
@@ -267,11 +268,7 @@ export function DashboardView({
           )}
         </section>
 
-        {/* Kolom kanan (5 kolom di XL): Jam & Kalender + Aktivitas Terbaru */}
-        <div className="xl:col-span-5 space-y-6">
-        <ClockCalendarCard />
-
-        {/* Recent Audit Trail Panel */}
+        {/* Aktivitas Terbaru (tepat di bawah Material Kritis) */}
         <section
           aria-label="Aktivitas Terbaru"
           className="rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] overflow-hidden"
@@ -337,6 +334,11 @@ export function DashboardView({
             </div>
           )}
         </section>
+        </div>
+
+        {/* Kolom kanan: Jam & Kalender */}
+        <div className="xl:col-span-5">
+          <ClockCalendarCard />
         </div>
       </div>
     </div>
