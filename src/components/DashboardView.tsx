@@ -187,13 +187,13 @@ export function DashboardView({
               </button>
 
               <button
-                type="button"
-                onClick={() => onNavigateMaterials('MENIPIS')}
-                className="inline-flex items-center gap-1 text-xs font-bold text-[#1D4ED8] dark:text-[#3B82F6] hover:underline whitespace-nowrap shrink-0 cursor-pointer min-h-[44px] px-2"
-              >
-                <span>Lihat Semua</span>
-                <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
-              </button>
+              type="button"
+              onClick={() => onNavigateMaterials('MENIPIS')}
+              className="w-28 inline-flex items-center justify-end gap-1 text-xs font-bold text-[#1D4ED8] dark:text-[#3B82F6] hover:underline whitespace-nowrap shrink-0 cursor-pointer min-h-[44px]"
+            >
+              <span>Lihat Semua</span>
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
             </div>
 
             {criticalOpen && (
@@ -299,13 +299,13 @@ export function DashboardView({
               </button>
 
               <button
-                type="button"
-                onClick={onNavigateLogbook}
-                className="inline-flex items-center gap-1 text-xs font-bold text-[#1D4ED8] dark:text-[#3B82F6] hover:underline whitespace-nowrap shrink-0 cursor-pointer min-h-[44px] px-2"
-              >
-                <span>Logbook</span>
-                <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
-              </button>
+              type="button"
+              onClick={onNavigateLogbook}
+              className="w-28 inline-flex items-center justify-end gap-1 text-xs font-bold text-[#1D4ED8] dark:text-[#3B82F6] hover:underline whitespace-nowrap shrink-0 cursor-pointer min-h-[44px]"
+            >
+              <span>Logbook</span>
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
             </div>
 
             {recentLogsOpen && (

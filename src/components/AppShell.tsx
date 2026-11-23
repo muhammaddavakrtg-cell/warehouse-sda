@@ -86,7 +86,7 @@ export function AppShell({
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white dark:bg-[#111827] border-r border-[#CBD5E1] dark:border-[#374151] z-30">
         <div className="min-h-16 py-3 px-5 flex items-center gap-3 border-b border-[#CBD5E1] dark:border-[#374151]">
           <img
-            src="/logo.png"
+            src="public/logo.png"
             alt="Logo Perusahaan"
             className="w-10 h-10 rounded-xl object-contain shrink-0"
           />
@@ -186,7 +186,7 @@ export function AppShell({
                   className="w-8 h-8 rounded-lg object-contain shrink-0"
                 />
                 <span className="font-display text-base font-extrabold tracking-tight truncate">
-                  Nama Perusahaan
+                  Inventory Material SD Plant
                 </span>
               </div>
               <button
