@@ -54,7 +54,7 @@ export function MaterialFormModal({
   useEffect(() => {
     if (isOpen) {
       if (editingMaterial) {
-        setQcode(editingMaterial.QCODE);
+        setQcode(editingMaterial.qcode);
         setName(editingMaterial.name);
         setDescription((editingMaterial as any).description ?? '');
         setAddedQty(0);
@@ -102,7 +102,7 @@ export function MaterialFormModal({
     setErrorMsg('');
 
     if (!isFormValid) {
-      setErrorMsg('Harap lengkapi semua kolom (QCODE, Nama, Deskripsi, Jumlah, Tanggal, dan UoM).');
+      setErrorMsg('Harap lengkapi semua kolom (qcode, Nama, Deskripsi, Jumlah, Tanggal, dan UoM).');
       return;
     }
 
@@ -112,7 +112,7 @@ export function MaterialFormModal({
       setIsSubmitting(true);
       if (editingMaterial) {
         await onUpdate(editingMaterial.id, {
-          QCODE: qcode.trim().toUpperCase(),
+          qcode: qcode.trim().toUpperCase(),
           name: name.trim(),
           category: editingMaterial.category || 'Raw Material',
           unit: uom,
@@ -124,7 +124,7 @@ export function MaterialFormModal({
         });
       } else {
         await onCreate({
-          QCODE: qcode.trim().toUpperCase(),
+          qcode: qcode.trim().toUpperCase(),
           name: name.trim(),
           category: 'Raw Material',
           unit: uom,
@@ -170,14 +170,14 @@ export function MaterialFormModal({
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5">
-          {/* 1. QCODE Material & 2. Nama Material */}
+          {/* 1. qcode Material & 2. Nama Material */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label
                 htmlFor="mat-qcode"
                 className="block text-xs font-bold text-[#334155] dark:text-[#D1D5DB] mb-1"
               >
-                QCODE Material *
+                qcode Material *
               </label>
               <input
                 id="mat-qcode"

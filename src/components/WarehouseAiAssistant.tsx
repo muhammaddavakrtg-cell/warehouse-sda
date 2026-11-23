@@ -37,7 +37,7 @@ export function WarehouseAiAssistant({
     {
       id: 'welcome',
       sender: 'ai',
-      text: 'Halo! Saya Asisten AI Inventory SD Plant. Tanyakan stok material (ketik QCODE/nama), daftar stok menipis, atau ringkasan aktivitas hari ini.',
+      text: 'Halo! Saya Asisten AI Inventory SD Plant. Tanyakan stok material (ketik qcode/nama), daftar stok menipis, atau ringkasan aktivitas hari ini.',
     },
   ]);
 
@@ -74,14 +74,14 @@ export function WarehouseAiAssistant({
       if (stats.habis.length > 0) {
         lines.push(`🔴 Stok Habis (${stats.habis.length}):`);
         stats.habis.slice(0, 5).forEach((m) => {
-          lines.push(`• ${m.QCODE} — ${m.name} (0 ${m.unit})`);
+          lines.push(`• ${m.qcode} — ${m.name} (0 ${m.unit})`);
         });
       }
       if (stats.menipis.length > 0) {
         lines.push(`🟡 Stok Menipis (${stats.menipis.length}):`);
         stats.menipis.slice(0, 5).forEach((m) => {
           lines.push(
-            `• ${m.QCODE} — ${m.name} (sisa ${formatNumber(m.currentStock)}/${formatNumber(m.minStock)} ${m.unit})`
+            `• ${m.qcode} — ${m.name} (sisa ${formatNumber(m.currentStock)}/${formatNumber(m.minStock)} ${m.unit})`
           );
         });
       }
@@ -92,7 +92,7 @@ export function WarehouseAiAssistant({
         sender: 'ai',
         text: lines.join('\n'),
         actionMaterialId: topPriority?.id,
-        actionLabel: topPriority ? `Restock ${topPriority.QCODE}` : undefined,
+        actionLabel: topPriority ? `Restock ${topPriority.qcode}` : undefined,
       };
     }
 
@@ -116,19 +116,19 @@ export function WarehouseAiAssistant({
       };
     }
 
-    if (q.includes('total') || q.includes('berapa material') || q.includes('jumlah QCODE')) {
+    if (q.includes('total') || q.includes('berapa material') || q.includes('jumlah qcode')) {
       return {
         id,
         sender: 'ai',
-        text: `📦 Saat ini terdaftar ${formatNumber(materials.length)} QCODE material di sistem:\n• Aman: ${formatNumber(materials.length - stats.habis.length - stats.menipis.length)} QCODE\n• Menipis: ${formatNumber(stats.menipis.length)} QCODE\n• Stok Habis: ${formatNumber(stats.habis.length)} QCODE`,
+        text: `📦 Saat ini terdaftar ${formatNumber(materials.length)} qcode material di sistem:\n• Aman: ${formatNumber(materials.length - stats.habis.length - stats.menipis.length)} qcode\n• Menipis: ${formatNumber(stats.menipis.length)} qcode\n• Stok Habis: ${formatNumber(stats.habis.length)} qcode`,
       };
     }
 
     const matched = materials.filter(
       (m) =>
-        m.QCODE.toLowerCase().includes(q) ||
+        m.qcode.toLowerCase().includes(q) ||
         m.name.toLowerCase().includes(q) ||
-        q.includes(m.QCODE.toLowerCase())
+        q.includes(m.qcode.toLowerCase())
     );
 
     if (matched.length > 0) {
@@ -141,16 +141,16 @@ export function WarehouseAiAssistant({
       return {
         id,
         sender: 'ai',
-        text: `🔎 ${item.QCODE} — ${item.name}\n• Sisa Stok: ${formatNumber(item.currentStock)} ${item.unit} (Status: ${status})\n• Minimum Stok: ${formatNumber(item.minStock)} ${item.unit}\n• Deskripsi: ${item.description || '-'}${extra}`,
+        text: `🔎 ${item.qcode} — ${item.name}\n• Sisa Stok: ${formatNumber(item.currentStock)} ${item.unit} (Status: ${status})\n• Minimum Stok: ${formatNumber(item.minStock)} ${item.unit}\n• Deskripsi: ${item.description || '-'}${extra}`,
         actionMaterialId: status !== 'AMAN' ? item.id : undefined,
-        actionLabel: status !== 'AMAN' ? `Restock ${item.QCODE}` : undefined,
+        actionLabel: status !== 'AMAN' ? `Restock ${item.qcode}` : undefined,
       };
     }
 
     return {
       id,
       sender: 'ai',
-      text: 'Saya belum menemukan material dengan kata kunci tersebut. Coba ketik kode QCODE (contoh: QC-001), nama material, atau pilih pertanyaan cepat di bawah.',
+      text: 'Saya belum menemukan material dengan kata kunci tersebut. Coba ketik kode qcode (contoh: QC-001), nama material, atau pilih pertanyaan cepat di bawah.',
     };
   };
 
@@ -269,7 +269,7 @@ export function WarehouseAiAssistant({
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ketik QCODE, nama material, atau tanya..."
+                placeholder="Ketik qcode, nama material, atau tanya..."
                 className="flex-1 h-9 px-3 rounded-xl border border-[#CBD5E1] dark:border-[#374151] bg-[#F8FAFC] dark:bg-[#090D16] text-xs focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
               />
               <button

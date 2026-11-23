@@ -48,7 +48,7 @@ export function exportLogsToCsv(logs: StockLog[]): void {
   const headers = [
     'Waktu',
     'Jenis',
-    'QCODE',
+    'qcode',
     'Nama Material',
     'Jumlah',
     'Satuan',
@@ -70,7 +70,7 @@ export function exportLogsToCsv(logs: StockLog[]): void {
   const rows = logs.map((log) => [
     formatDateTime(log.createdAt),
     log.type,
-    log.materialQCODE,
+    log.materialqcode,
     log.materialName,
     log.type === 'MASUK' ? `+${log.quantity}` : `-${log.quantity}`,
     log.materialUnit,

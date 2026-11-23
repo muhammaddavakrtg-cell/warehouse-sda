@@ -25,7 +25,7 @@ function buildFallbackSeed(): WarehouseDatabase {
     materials: [
       {
         id: 'mat-01',
-        QCODE: 'ELK-NYM-215',
+        qcode: 'ELK-NYM-215',
         name: 'Kabel NYM 3x2.5mm Eterna (Roll 50m)',
         category: 'Elektrikal',
         unit: 'roll',
@@ -37,7 +37,7 @@ function buildFallbackSeed(): WarehouseDatabase {
       },
       {
         id: 'mat-02',
-        QCODE: 'MEK-BLT-M12',
+        qcode: 'MEK-BLT-M12',
         name: 'Baut Hex Baja M12 x 50mm Galvanis',
         category: 'Mekanikal',
         unit: 'pcs',
@@ -52,7 +52,7 @@ function buildFallbackSeed(): WarehouseDatabase {
       {
         id: 'log-01',
         materialId: 'mat-01',
-        materialQCODE: 'ELK-NYM-215',
+        materialqcode: 'ELK-NYM-215',
         materialName: 'Kabel NYM 3x2.5mm Eterna (Roll 50m)',
         materialUnit: 'roll',
         type: 'KELUAR',

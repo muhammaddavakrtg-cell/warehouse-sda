@@ -29,14 +29,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   if (req.method === 'POST') {
     try {
       const payload = (await readJsonBody(req)) as CreateMaterialInput;
-      const QCODE = String(payload.QCODE || '').trim().toUpperCase();
+      const qcode = String(payload.qcode || '').trim().toUpperCase();
       const name = String(payload.name || '').trim();
       const location = String(payload.location || '').trim();
       const currentStock = Number(payload.currentStock);
       const minStock = Number(payload.minStock);
 
-      if (!QCODE || !name || !location) {
-        return sendJson(res, 400, { error: 'QCODE, Nama Material, dan Lokasi Rak wajib diisi.' });
+      if (!qcode || !name || !location) {
+        return sendJson(res, 400, { error: 'qcode, Nama Material, dan Lokasi Rak wajib diisi.' });
       }
       if (!Number.isFinite(currentStock) || currentStock < 0) {
         return sendJson(res, 400, { error: 'Stok awal tidak boleh kurang dari 0.' });
@@ -46,14 +46,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       }
 
       const created = await runAtomic((db) => {
-        const duplicate = db.materials.find((m) => m.QCODE.toUpperCase() === QCODE);
+        const duplicate = db.materials.find((m) => m.qcode.toUpperCase() === qcode);
         if (duplicate) {
-          throw new Error(`QCODE "${QCODE}" sudah terdaftar pada material "${duplicate.name}".`);
+          throw new Error(`qcode "${qcode}" sudah terdaftar pada material "${duplicate.name}".`);
         }
         const nowIso = new Date().toISOString();
         const material: Material = {
           id: `mat-${crypto.randomUUID().slice(0, 8)}`,
-          QCODE,
+          qcode,
           name,
           category: payload.category,
           unit: payload.unit,
@@ -69,7 +69,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
           db.logs.unshift({
             id: `log-${crypto.randomUUID().slice(0, 8)}`,
             materialId: material.id,
-            materialQCODE: material.QCODE,
+            materialqcode: material.qcode,
             materialName: material.name,
             materialUnit: material.unit,
             type: 'MASUK',

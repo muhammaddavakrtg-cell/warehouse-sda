@@ -48,7 +48,7 @@ export async function exportKeluarToPdf(
     head: [
       [
         'Waktu',
-        'QCODE',
+        'qcode',
         'Material',
         'Jumlah',
         'Stok Awal',
@@ -60,7 +60,7 @@ export async function exportKeluarToPdf(
     ],
     body: logs.map((log) => [
       formatWaktu(log.createdAt),
-      log.materialQCODE,
+      log.materialqcode,
       log.materialName,
       `${log.quantity} ${log.materialUnit}`,
       `${log.stockBefore} ${log.materialUnit}`,
@@ -101,7 +101,7 @@ export async function exportKeluarToExcel(logs: StockLog[]): Promise<void> {
 
   const header = [
     'Waktu',
-    'QCODE',
+    'qcode',
     'Material',
     'Jumlah',
     'Satuan',
@@ -114,7 +114,7 @@ export async function exportKeluarToExcel(logs: StockLog[]): Promise<void> {
 
   const rows = logs.map((log) => [
     formatWaktu(log.createdAt),
-    log.materialQCODE,
+    log.materialqcode,
     log.materialName,
     log.quantity,
     log.materialUnit,

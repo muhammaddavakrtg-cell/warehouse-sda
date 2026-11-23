@@ -28,13 +28,13 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const urlPath = (req.url || '').split('?')[0];
     const id = String((req as any).query?.id || urlPath.split('/').pop() || '');
     const payload = (await readJsonBody(req)) as UpdateMaterialInput;
-    const QCODE = String(payload.QCODE || '').trim().toUpperCase();
+    const qcode = String(payload.qcode || '').trim().toUpperCase();
     const name = String(payload.name || '').trim();
     const location = String(payload.location || '').trim();
     const minStock = Number(payload.minStock);
 
-    if (!QCODE || !name || !location) {
-      return sendJson(res, 400, { error: 'QCODE, Nama Material, dan Lokasi Rak wajib diisi.' });
+    if (!qcode || !name || !location) {
+      return sendJson(res, 400, { error: 'qcode, Nama Material, dan Lokasi Rak wajib diisi.' });
     }
     if (!Number.isFinite(minStock) || minStock < 0) {
       return sendJson(res, 400, { error: 'Batas minimum stok tidak boleh negatif.' });
@@ -45,14 +45,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       if (index === -1) {
         throw new Error('Material tidak ditemukan.');
       }
-      const duplicate = db.materials.find((m) => m.id !== id && m.QCODE.toUpperCase() === QCODE);
+      const duplicate = db.materials.find((m) => m.id !== id && m.qcode.toUpperCase() === qcode);
       if (duplicate) {
-        throw new Error(`QCODE "${QCODE}" sudah digunakan oleh material lain.`);
+        throw new Error(`qcode "${qcode}" sudah digunakan oleh material lain.`);
       }
       const existing = db.materials[index];
       const next: Material = {
         ...existing,
-        QCODE,
+        qcode,
         name,
         category: payload.category,
         unit: payload.unit,

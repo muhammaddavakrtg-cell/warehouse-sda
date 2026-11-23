@@ -93,7 +93,7 @@ export function DashboardView({
           <p className="mt-3 text-2xl sm:text-3xl font-display font-extrabold tabular-nums tracking-tight">
             {formatNumber(totalMaterials)}
           </p>
-          <p className="mt-1 text-xs text-[#334155] dark:text-[#D1D5DB]">QCODE aktif terdaftar</p>
+          <p className="mt-1 text-xs text-[#334155] dark:text-[#D1D5DB]">qcode aktif terdaftar</p>
         </button>
 
         <button
@@ -222,7 +222,7 @@ export function DashboardView({
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-mono text-xs font-semibold text-[#334155] dark:text-[#D1D5DB]">
-                                {item.QCODE}
+                                {item.qcode}
                               </span>
                               <span aria-hidden="true" className="text-[#CBD5E1] dark:text-[#374151]">
                                 ·

@@ -27,7 +27,7 @@ function buildInitialSeed(): WarehouseDatabase {
   const materials: Material[] = [
     {
       id: 'mat-01',
-      QCODE: 'ELK-NYM-215',
+      qcode: 'ELK-NYM-215',
       name: 'Kabel NYM 3x2.5mm Eterna (Roll 50m)',
       category: 'Elektrikal',
       unit: 'roll',
@@ -39,7 +39,7 @@ function buildInitialSeed(): WarehouseDatabase {
     },
     {
       id: 'mat-02',
-      QCODE: 'MEK-BLT-M12',
+      qcode: 'MEK-BLT-M12',
       name: 'Baut Hex Baja M12 x 50mm Galvanis',
       category: 'Mekanikal',
       unit: 'pcs',
@@ -51,7 +51,7 @@ function buildInitialSeed(): WarehouseDatabase {
     },
     {
       id: 'mat-03',
-      QCODE: 'PKG-STR-500',
+      qcode: 'PKG-STR-500',
       name: 'Stretch Film Wrapping 50cm x 300m',
       category: 'Packaging',
       unit: 'roll',
@@ -63,7 +63,7 @@ function buildInitialSeed(): WarehouseDatabase {
     },
     {
       id: 'mat-04',
-      QCODE: 'APD-HLM-PRO',
+      qcode: 'APD-HLM-PRO',
       name: 'Helm Safety Proyek Standar SNI (Putih)',
       category: 'Safety & APD',
       unit: 'pcs',
@@ -75,7 +75,7 @@ function buildInitialSeed(): WarehouseDatabase {
     },
     {
       id: 'mat-05',
-      QCODE: 'RAW-PIP-040',
+      qcode: 'RAW-PIP-040',
       name: 'Pipa Besi Galvanis Schedule 40 (2 Inch)',
       category: 'Raw Material',
       unit: 'meter',
@@ -87,7 +87,7 @@ function buildInitialSeed(): WarehouseDatabase {
     },
     {
       id: 'mat-06',
-      QCODE: 'CON-GLV-NIT',
+      qcode: 'CON-GLV-NIT',
       name: 'Sarung Tangan Karet Nitrile Heavy Duty',
       category: 'Consumable',
       unit: 'box',
@@ -99,7 +99,7 @@ function buildInitialSeed(): WarehouseDatabase {
     },
     {
       id: 'mat-07',
-      QCODE: 'MEK-BRG-6205',
+      qcode: 'MEK-BRG-6205',
       name: 'Bearing SKF 6205-2Z Deep Groove',
       category: 'Mekanikal',
       unit: 'pcs',
@@ -111,7 +111,7 @@ function buildInitialSeed(): WarehouseDatabase {
     },
     {
       id: 'mat-08',
-      QCODE: 'ELK-MCB-16A',
+      qcode: 'ELK-MCB-16A',
       name: 'MCB Schneider 1 Phase 16A C-Curve',
       category: 'Elektrikal',
       unit: 'pcs',
@@ -123,7 +123,7 @@ function buildInitialSeed(): WarehouseDatabase {
     },
     {
       id: 'mat-09',
-      QCODE: 'PKG-KRD-L60',
+      qcode: 'PKG-KRD-L60',
       name: 'Kardus Packing Double Wall 60x40x40cm',
       category: 'Packaging',
       unit: 'pcs',
@@ -135,7 +135,7 @@ function buildInitialSeed(): WarehouseDatabase {
     },
     {
       id: 'mat-10',
-      QCODE: 'CON-LUB-WD4',
+      qcode: 'CON-LUB-WD4',
       name: 'Cairan Penetran Anti Karat Industrial 412ml',
       category: 'Consumable',
       unit: 'pcs',
@@ -151,7 +151,7 @@ function buildInitialSeed(): WarehouseDatabase {
     {
       id: 'log-01',
       materialId: 'mat-01',
-      materialQCODE: 'ELK-NYM-215',
+      materialqcode: 'ELK-NYM-215',
       materialName: 'Kabel NYM 3x2.5mm Eterna (Roll 50m)',
       materialUnit: 'roll',
       type: 'KELUAR',
@@ -166,7 +166,7 @@ function buildInitialSeed(): WarehouseDatabase {
     {
       id: 'log-02',
       materialId: 'mat-06',
-      materialQCODE: 'CON-GLV-NIT',
+      materialqcode: 'CON-GLV-NIT',
       materialName: 'Sarung Tangan Karet Nitrile Heavy Duty',
       materialUnit: 'box',
       type: 'KELUAR',
@@ -181,7 +181,7 @@ function buildInitialSeed(): WarehouseDatabase {
     {
       id: 'log-03',
       materialId: 'mat-02',
-      materialQCODE: 'MEK-BLT-M12',
+      materialqcode: 'MEK-BLT-M12',
       materialName: 'Baut Hex Baja M12 x 50mm Galvanis',
       materialUnit: 'pcs',
       type: 'KELUAR',
@@ -196,7 +196,7 @@ function buildInitialSeed(): WarehouseDatabase {
     {
       id: 'log-04',
       materialId: 'mat-03',
-      materialQCODE: 'PKG-STR-500',
+      materialqcode: 'PKG-STR-500',
       materialName: 'Stretch Film Wrapping 50cm x 300m',
       materialUnit: 'roll',
       type: 'MASUK',
@@ -211,7 +211,7 @@ function buildInitialSeed(): WarehouseDatabase {
     {
       id: 'log-05',
       materialId: 'mat-04',
-      materialQCODE: 'APD-HLM-PRO',
+      materialqcode: 'APD-HLM-PRO',
       materialName: 'Helm Safety Proyek Standar SNI (Putih)',
       materialUnit: 'pcs',
       type: 'KELUAR',
@@ -226,7 +226,7 @@ function buildInitialSeed(): WarehouseDatabase {
     {
       id: 'log-06',
       materialId: 'mat-08',
-      materialQCODE: 'ELK-MCB-16A',
+      materialqcode: 'ELK-MCB-16A',
       materialName: 'MCB Schneider 1 Phase 16A C-Curve',
       materialUnit: 'pcs',
       type: 'KELUAR',
@@ -241,7 +241,7 @@ function buildInitialSeed(): WarehouseDatabase {
     {
       id: 'log-07',
       materialId: 'mat-05',
-      materialQCODE: 'RAW-PIP-040',
+      materialqcode: 'RAW-PIP-040',
       materialName: 'Pipa Besi Galvanis Schedule 40 (2 Inch)',
       materialUnit: 'meter',
       type: 'MASUK',
@@ -256,7 +256,7 @@ function buildInitialSeed(): WarehouseDatabase {
     {
       id: 'log-08',
       materialId: 'mat-09',
-      materialQCODE: 'PKG-KRD-L60',
+      materialqcode: 'PKG-KRD-L60',
       materialName: 'Kardus Packing Double Wall 60x40x40cm',
       materialUnit: 'pcs',
       type: 'MASUK',
@@ -330,14 +330,14 @@ async function startServer() {
   app.post('/api/materials', async (req, res) => {
     try {
       const payload = req.body as CreateMaterialInput;
-      const QCODE = String(payload.QCODE || '').trim().toUpperCase();
+      const qcode = String(payload.qcode || '').trim().toUpperCase();
       const name = String(payload.name || '').trim();
       const location = String(payload.location || '').trim();
       const currentStock = Number(payload.currentStock);
       const minStock = Number(payload.minStock);
 
-      if (!QCODE || !name || !location) {
-        return res.status(400).json({ error: 'QCODE, Nama Material, dan Lokasi Rak wajib diisi.' });
+      if (!qcode || !name || !location) {
+        return res.status(400).json({ error: 'qcode, Nama Material, dan Lokasi Rak wajib diisi.' });
       }
       if (!Number.isFinite(currentStock) || currentStock < 0) {
         return res.status(400).json({ error: 'Stok awal tidak boleh kurang dari 0.' });
@@ -347,14 +347,14 @@ async function startServer() {
       }
 
       const created = await runAtomic((db) => {
-        const duplicate = db.materials.find((m) => m.QCODE.toUpperCase() === QCODE);
+        const duplicate = db.materials.find((m) => m.qcode.toUpperCase() === qcode);
         if (duplicate) {
-          throw new Error(`QCODE "${QCODE}" sudah terdaftar pada material "${duplicate.name}".`);
+          throw new Error(`qcode "${qcode}" sudah terdaftar pada material "${duplicate.name}".`);
         }
         const nowIso = new Date().toISOString();
         const material: Material = {
           id: `mat-${crypto.randomUUID().slice(0, 8)}`,
-          QCODE,
+          qcode,
           name,
           category: payload.category,
           unit: payload.unit,
@@ -370,7 +370,7 @@ async function startServer() {
           db.logs.unshift({
             id: `log-${crypto.randomUUID().slice(0, 8)}`,
             materialId: material.id,
-            materialQCODE: material.QCODE,
+            materialqcode: material.qcode,
             materialName: material.name,
             materialUnit: material.unit,
             type: 'MASUK',
@@ -397,13 +397,13 @@ async function startServer() {
     try {
       const { id } = req.params;
       const payload = req.body as UpdateMaterialInput;
-      const QCODE = String(payload.QCODE || '').trim().toUpperCase();
+      const qcode = String(payload.qcode || '').trim().toUpperCase();
       const name = String(payload.name || '').trim();
       const location = String(payload.location || '').trim();
       const minStock = Number(payload.minStock);
 
-      if (!QCODE || !name || !location) {
-        return res.status(400).json({ error: 'QCODE, Nama Material, dan Lokasi Rak wajib diisi.' });
+      if (!qcode || !name || !location) {
+        return res.status(400).json({ error: 'qcode, Nama Material, dan Lokasi Rak wajib diisi.' });
       }
       if (!Number.isFinite(minStock) || minStock < 0) {
         return res.status(400).json({ error: 'Batas minimum stok tidak boleh negatif.' });
@@ -414,14 +414,14 @@ async function startServer() {
         if (index === -1) {
           throw new Error('Material tidak ditemukan.');
         }
-        const duplicate = db.materials.find((m) => m.id !== id && m.QCODE.toUpperCase() === QCODE);
+        const duplicate = db.materials.find((m) => m.id !== id && m.qcode.toUpperCase() === qcode);
         if (duplicate) {
-          throw new Error(`QCODE "${QCODE}" sudah digunakan oleh material lain.`);
+          throw new Error(`qcode "${qcode}" sudah digunakan oleh material lain.`);
         }
         const existing = db.materials[index];
         const next: Material = {
           ...existing,
-          QCODE,
+          qcode,
           name,
           category: payload.category,
           unit: payload.unit,
@@ -493,7 +493,7 @@ async function startServer() {
         const logEntry: StockLog = {
           id: `log-${crypto.randomUUID().slice(0, 8)}`,
           materialId: material.id,
-          materialQCODE: material.QCODE,
+          materialqcode: material.qcode,
           materialName: material.name,
           materialUnit: material.unit,
           type: payload.type,
