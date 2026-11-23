@@ -441,14 +441,80 @@ export default function App() {
         );
       }
 
+      const normalizedSku = input.sku.trim().toUpperCase();
+      const qtyToAdd = Math.max(1, Number(input.currentStock ?? 1));
+
+      // Cek apakah QCODE (SKU) sudah ada di daftar material
+      const existing = materials.find(
+        (m) => m.sku.trim().toUpperCase() === normalizedSku
+      );
+
+      if (existing) {
+        const stockBefore = Number(existing.currentStock) || 0;
+        const stockAfter = stockBefore + qtyToAdd;
+
+        const { data: updatedRow, error: updateErr } = await supabase
+          .from('materials')
+          .update({
+            current_stock: stockAfter,
+            description: input.description?.trim() || existing.description || '',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id)
+          .select()
+          .single();
+
+        if (updateErr) {
+          throw new Error(updateErr.message || 'Gagal menambahkan stok ke material yang sudah ada.');
+        }
+
+        await supabase.from('stock_logs').insert({
+          material_id: existing.id,
+          material_sku: existing.sku,
+          material_name: existing.name,
+          material_unit: existing.unit,
+          type: 'MASUK',
+          quantity: qtyToAdd,
+          stock_before: stockBefore,
+          stock_after: stockAfter,
+          party: 'Penambahan Stok (QCODE Terdaftar)',
+          pic:
+            profile?.fullName ||
+            profile?.username ||
+            session?.user?.email?.split('@')[0] ||
+            'Staf Gudang',
+          notes: input.description?.trim() || 'Penambahan stok material masuk',
+        });
+
+        const updated = mapMaterialRow(updatedRow);
+        setCustomNotifications((prev) => [
+          {
+            id: `added-${updated.id}-${Date.now()}`,
+            title: 'Stok Material Ditambahkan',
+            description: `${updated.sku} — ${updated.name} (+${qtyToAdd} ${updated.unit}, total: ${updated.currentStock} ${updated.unit}).`,
+            level: 'ADDED',
+            createdAt: Date.now(),
+          },
+          ...prev,
+        ]);
+
+        await fetchWarehouseData();
+        pushToast(
+          'success',
+          'Stok material ditambahkan',
+          `${updated.sku} — ${updated.name} (+${qtyToAdd} ${updated.unit})`
+        );
+        return;
+      }
+
       const { data, error } = await supabase
         .from('materials')
         .insert({
-          sku: input.sku.trim(),
+          sku: normalizedSku,
           name: input.name.trim(),
           category: input.category.trim(),
           unit: input.unit.trim(),
-          current_stock: Number(input.currentStock ?? 0),
+          current_stock: qtyToAdd,
           description: input.description?.trim() || '',
           min_stock: Number(input.minStock ?? 0),
         })
@@ -456,8 +522,29 @@ export default function App() {
         .single();
 
       if (error) {
+        if (error.message?.includes('materials_sku_key')) {
+          throw new Error(`QCODE "${normalizedSku}" sudah terdaftar. Gunakan menu Edit/Restock atau masukkan QCODE berbeda.`);
+        }
         throw new Error(error.message || 'Gagal menambahkan material.');
       }
+
+      const created = mapMaterialRow(data);
+      setCustomNotifications((prev) => [
+        {
+          id: `added-${created.id}-${Date.now()}`,
+          title: 'Material Baru Ditambahkan',
+          description: `${created.sku} — ${created.name} (${created.currentStock} ${created.unit}) telah ditambahkan.`,
+          level: 'ADDED',
+          createdAt: Date.now(),
+        },
+        ...prev,
+      ]);
+
+      await fetchWarehouseData();
+      pushToast('success', 'Material berhasil ditambahkan', `${created.sku} — ${created.name}`);
+    },
+    [assertCanEdit, materials, profile, session, fetchWarehouseData, pushToast]
+  );
 
       const created = mapMaterialRow(data);
       setCustomNotifications((prev) => [
@@ -687,7 +774,11 @@ export default function App() {
         onTabChange={setActiveTab}
         theme={theme}
         onToggleTheme={toggleTheme}
-        onOpenTransaction={() => {
+        onOpenTransaction={(type) => {
+          if (type === 'KELUAR') {
+            handleOpenTransaction('KELUAR');
+            return;
+          }
           if (!canEdit) {
             pushToast('info', 'Mode Hanya Lihat', 'Akun Anda tidak memiliki izin mencatat transaksi.');
             return;
