@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import {
-  ArrowDownLeft,
   ArrowUpRight,
   Boxes,
   ClipboardList,
@@ -91,56 +90,46 @@ export function AppShell({
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onTabChange(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors duration-150 cursor-pointer ${
-                  isActive
-                    ? 'bg-[#1D4ED8] text-white dark:bg-[#3B82F6] dark:text-[#090D16]'
-                    : 'text-[#334155] dark:text-[#D1D5DB] hover:bg-slate-100 dark:hover:bg-gray-800 hover:text-[#0F172A] dark:hover:text-[#F9FAFB]'
-                }`}
-              >
-                <span className="flex items-center gap-3 whitespace-nowrap">
-                  <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
-                  <span>{item.label}</span>
-                </span>
-                {item.id === 'materials' && criticalCount > 0 && (
-                  <span
-                    className={`font-mono tabular-nums text-xs font-bold px-1.5 py-0.5 rounded ${
-                      isActive
-                        ? 'bg-white/20 text-white dark:bg-[#090D16]/20 dark:text-[#090D16]'
-                        : 'bg-[#FEF3C7] text-[#B45309] dark:bg-[#78350F] dark:text-[#FBBF24]'
-                    }`}
-                  >
-                    {criticalCount}
+              <div key={item.id} className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => onTabChange(item.id)}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors duration-150 cursor-pointer ${
+                    isActive
+                      ? 'bg-[#1D4ED8] text-white dark:bg-[#3B82F6] dark:text-[#090D16]'
+                      : 'text-[#334155] dark:text-[#D1D5DB] hover:bg-slate-100 dark:hover:bg-gray-800 hover:text-[#0F172A] dark:hover:text-[#F9FAFB]'
+                  }`}
+                >
+                  <span className="flex items-center gap-3 whitespace-nowrap">
+                    <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
+                    <span>{item.label}</span>
                   </span>
+                  {item.id === 'materials' && criticalCount > 0 && (
+                    <span
+                      className={`font-mono tabular-nums text-xs font-bold px-1.5 py-0.5 rounded ${
+                        isActive
+                          ? 'bg-white/20 text-white dark:bg-[#090D16]/20 dark:text-[#090D16]'
+                          : 'bg-[#FEF3C7] text-[#B45309] dark:bg-[#78350F] dark:text-[#FBBF24]'
+                      }`}
+                    >
+                      {criticalCount}
+                    </span>
+                  )}
+                </button>
+
+                {item.id === 'materials' && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenTransaction('KELUAR')}
+                    className="w-full flex items-center gap-3 pl-9 pr-3.5 py-2 rounded-xl text-sm font-semibold text-[#C2410C] dark:text-[#FB923C] hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-colors duration-150 cursor-pointer whitespace-nowrap"
+                  >
+                    <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden="true" />
+                    <span>Material Keluar</span>
+                  </button>
                 )}
-              </button>
+              </div>
             );
           })}
-
-          <div className="pt-5 mt-5 border-t border-[#CBD5E1] dark:border-[#374151] space-y-2">
-            <p className="px-3.5 text-xs font-semibold text-[#334155] dark:text-[#D1D5DB]">
-              Aksi Cepat Stok
-            </p>
-            <button
-              type="button"
-              onClick={() => onOpenTransaction('MASUK')}
-              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold border border-[#86EFAC] bg-[#DCFCE7] text-[#15803D] hover:brightness-95 dark:border-[#166534] dark:bg-[#14532D] dark:text-[#4ADE80] transition-all duration-150 cursor-pointer whitespace-nowrap"
-            >
-              <ArrowDownLeft className="w-4 h-4 shrink-0" aria-hidden="true" />
-              <span>Stok Masuk</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onOpenTransaction('KELUAR')}
-              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold border border-[#FDBA74] bg-[#FFEDD5] text-[#C2410C] hover:brightness-95 dark:border-[#9A3412] dark:bg-[#431407] dark:text-[#FB923C] transition-all duration-150 cursor-pointer whitespace-nowrap"
-            >
-              <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden="true" />
-              <span>Stok Keluar</span>
-            </button>
-          </div>
         </nav>
 
         <div className="p-4 border-t border-[#CBD5E1] dark:border-[#374151] space-y-3">

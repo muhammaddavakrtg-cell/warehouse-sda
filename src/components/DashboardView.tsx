@@ -4,14 +4,12 @@ import {
   AlertTriangle,
   ArrowDownLeft,
   ArrowRight,
-  ArrowUpRight,
   Boxes,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   MapPin,
   PackageCheck,
-  Plus,
   XOctagon,
 } from 'lucide-react';
 import type { Material, StockLog, StockStatus, TransactionType } from '../types/warehouse';
@@ -44,7 +42,6 @@ export function DashboardView({
   onNavigateLogbook,
 }: DashboardViewProps) {
   const [criticalOpen, setCriticalOpen] = useState(true);
-  const [outgoingOpen, setOutgoingOpen] = useState(true);
   const [recentLogsOpen, setRecentLogsOpen] = useState(true);
 
   const totalMaterials = materials.length;
@@ -60,7 +57,6 @@ export function DashboardView({
     materials.filter((m) => getStockStatus(m.currentStock, m.minStock) !== 'AMAN')
   );
 
-  const outgoingLogs = logs.filter((l) => l.type === 'KELUAR').slice(0, 8);
   const recentLogs = logs.slice(0, 6);
 
   if (isLoading) {
@@ -81,7 +77,6 @@ export function DashboardView({
 
   return (
     <div className="space-y-6">
-      {/* KPI Cards Grid */}
       <section aria-label="Ringkasan KPI Gudang" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <button
           type="button"
@@ -163,98 +158,7 @@ export function DashboardView({
       </section>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-        {/* Kolom Kiri: Data Material Keluar + Material Kritis + Aktivitas Terbaru */}
         <div className="xl:col-span-9 space-y-6">
-          {/* Data Material Keluar & Fitur Tambah Material Keluar */}
-          <section
-            aria-label="Data Material Keluar"
-            className="rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] overflow-hidden"
-          >
-            <div className="px-5 py-4 border-b border-[#CBD5E1] dark:border-[#374151] flex items-center justify-between gap-3 flex-wrap">
-              <button
-                type="button"
-                onClick={() => setOutgoingOpen((prev) => !prev)}
-                aria-expanded={outgoingOpen}
-                className="flex-1 min-w-[200px] flex items-center justify-between gap-3 text-left cursor-pointer group"
-              >
-                <div>
-                  <h2 className="font-display text-base sm:text-lg font-bold group-hover:text-[#1D4ED8] dark:group-hover:text-[#3B82F6] transition-colors">
-                    Data Material Keluar ({formatNumber(outgoingLogs.length)})
-                  </h2>
-                  <p className="text-xs text-[#334155] dark:text-[#D1D5DB] mt-0.5">
-                    Daftar pengeluaran material beserta pengambil dan area penggunaan
-                  </p>
-                </div>
-                <span className="w-8 h-8 rounded-lg border border-[#CBD5E1] dark:border-[#374151] flex items-center justify-center shrink-0">
-                  {outgoingOpen ? (
-                    <ChevronUp className="w-4 h-4" aria-hidden="true" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" aria-hidden="true" />
-                  )}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onQuickTransaction('KELUAR')}
-                className="inline-flex items-center justify-center gap-1.5 min-h-[40px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-[#C2410C] text-white hover:bg-orange-800 dark:bg-[#FB923C] dark:text-[#090D16] dark:hover:bg-orange-300 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-              >
-                <Plus className="w-4 h-4 shrink-0" aria-hidden="true" />
-                <span>Tambah Material Keluar</span>
-              </button>
-            </div>
-
-            {outgoingOpen && (
-              <>
-                {outgoingLogs.length === 0 ? (
-                  <div className="p-8 text-center text-sm text-[#334155] dark:text-[#D1D5DB]">
-                    Belum ada data material keluar tercatat.
-                  </div>
-                ) : (
-                  <div className="divide-y divide-[#CBD5E1] dark:divide-[#374151]">
-                    {outgoingLogs.map((log) => (
-                      <div
-                        key={log.id}
-                        className="p-4 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-gray-800/50 transition-colors"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono text-xs font-semibold text-[#334155] dark:text-[#D1D5DB]">
-                              {log.materialSku}
-                            </span>
-                            <span aria-hidden="true" className="text-[#CBD5E1] dark:text-[#374151]">
-                              ·
-                            </span>
-                            <span className="font-mono text-xs tabular-nums text-[#334155] dark:text-[#D1D5DB]">
-                              {formatShortTime(log.createdAt)}
-                            </span>
-                          </div>
-                          <p className="mt-1 font-semibold text-sm sm:text-base truncate">
-                            {log.materialName}
-                          </p>
-                          <p className="mt-0.5 text-xs text-[#334155] dark:text-[#D1D5DB] truncate">
-                            Pengambil: <strong>{log.party || '-'}</strong> · Area:{' '}
-                            <strong>{log.pic || '-'}</strong>
-                          </p>
-                        </div>
-
-                        <div className="text-right shrink-0">
-                          <p className="font-mono text-sm font-bold tabular-nums text-[#C2410C] dark:text-[#FB923C]">
-                            -{formatNumber(log.quantity)} {log.materialUnit}
-                          </p>
-                          <p className="mt-0.5 font-mono text-xs tabular-nums text-[#334155] dark:text-[#D1D5DB]">
-                            Sisa: {formatNumber(log.stockAfter)} {log.materialUnit}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </section>
-
-          {/* Material Kritis */}
           <section
             aria-label="Material Kritis"
             className="rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] overflow-hidden"
@@ -367,7 +271,6 @@ export function DashboardView({
             )}
           </section>
 
-          {/* Aktivitas Terbaru */}
           <section
             aria-label="Aktivitas Terbaru"
             className="rounded-2xl bg-white dark:bg-[#111827] border border-[#CBD5E1] dark:border-[#374151] overflow-hidden"
