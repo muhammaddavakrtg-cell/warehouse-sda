@@ -574,7 +574,7 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
             </button>
           </form>
         )}
-                )}
+
       </div>
 
       {popupMsg && (
