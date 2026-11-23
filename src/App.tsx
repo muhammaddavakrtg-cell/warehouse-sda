@@ -528,18 +528,6 @@ export default function App() {
         throw new Error(error.message || 'Gagal menambahkan material.');
       }
 
-      const created = mapMaterialRow(data);
-      setCustomNotifications((prev) => [
-        {
-          id: `added-${created.id}-${Date.now()}`,
-          title: 'Material Baru Ditambahkan',
-          description: `${created.sku} — ${created.name} (${created.currentStock} ${created.unit}) telah ditambahkan.`,
-          level: 'ADDED',
-          createdAt: Date.now(),
-        },
-        ...prev,
-      ]);
-
       await fetchWarehouseData();
       pushToast('success', 'Material berhasil ditambahkan', `${created.sku} — ${created.name}`);
     },
