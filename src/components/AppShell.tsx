@@ -13,11 +13,12 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import type { TransactionType } from '../types/warehouse';
+import type { Material, StockLog, TransactionType } from '../types/warehouse';
 import { BrandLogo } from './BrandLogo';
 import { ClockCalendarCard } from './ClockCalendarCard';
 import { NotificationBell, type NotificationItem } from './NotificationBell';
 import { ThemeToggle } from './ThemeToggle';
+import { WarehouseAiAssistant } from './WarehouseAiAssistant';
 
 export type NavTab = 'dashboard' | 'materials' | 'logbook' | 'users' | 'activity' | 'profile';
 
@@ -37,6 +38,9 @@ interface AppShellProps {
   onOpenNotifications?: () => void;
   onDismissNotification?: (id: string) => void;
   onClearAllNotifications?: () => void;
+  materials?: Material[];
+  logs?: StockLog[];
+  onQuickRestock?: (materialId: string) => void;
   children: ReactNode;
 }
 
@@ -64,6 +68,9 @@ export function AppShell({
   onOpenNotifications,
   onDismissNotification,
   onClearAllNotifications,
+  materials = [],
+  logs = [],
+  onQuickRestock,
   children,
 }: AppShellProps) {
   const visibleNavItems = NAV_ITEMS.filter(
@@ -158,6 +165,7 @@ export function AppShell({
           </div>
         </div>
       </header>
+
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:top-16 lg:bottom-0 lg:left-0 bg-white dark:bg-[#111827] border-r border-[#CBD5E1] dark:border-[#374151] z-20">
         <nav className="flex-1 px-3 py-5 space-y-1.5 overflow-y-auto" aria-label="Navigasi Utama">
@@ -201,6 +209,16 @@ export function AppShell({
                     <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden="true" />
                     <span>Material Keluar</span>
                   </button>
+                )}
+
+                {item.id === 'profile' && (
+                  <div className="pt-1">
+                    <WarehouseAiAssistant
+                      materials={materials}
+                      logs={logs}
+                      onQuickRestock={onQuickRestock}
+                    />
+                  </div>
                 )}
               </div>
             );
@@ -340,6 +358,17 @@ export function AppShell({
                         <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden="true" />
                         <span>Material Keluar</span>
                       </button>
+                    )}
+
+                    {item.id === 'profile' && (
+                      <div className="pt-1">
+                        <WarehouseAiAssistant
+                          materials={materials}
+                          logs={logs}
+                          onQuickRestock={onQuickRestock}
+                          onBeforeOpen={() => setMobileMenuOpen(false)}
+                        />
+                      </div>
                     )}
                   </div>
                 );

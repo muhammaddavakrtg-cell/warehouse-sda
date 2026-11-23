@@ -12,6 +12,7 @@ import { ProfilePanel } from './components/ProfilePanel';
 import { UserManagementPanel } from './components/UserManagementPanel';
 import { ToastContainer } from './components/ToastContainer';
 import { TransactionModal } from './components/TransactionModal';
+import { WarehouseAiAssistant } from './components/WarehouseAiAssistant';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import {
   getAccessRoleLabel,
@@ -751,6 +752,9 @@ export default function App() {
   return (
     <>
       <AppShell
+      materials={materials}
+     logs={logs}
+     onQuickRestock={(materialId) => handleOpenTransaction('MASUK', materialId)}
         activeTab={activeTab}
         onTabChange={setActiveTab}
         theme={theme}
@@ -967,7 +971,4 @@ export default function App() {
         </div>
       )}
 
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-    </>
-  );
-}
+   <ToastContainer toasts={toasts} onDismiss={dismissToast} />
