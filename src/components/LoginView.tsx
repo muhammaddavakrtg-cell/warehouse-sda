@@ -1,12 +1,41 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
+type ThemeMode = 'system' | 'light' | 'dark';
+
 interface LoginViewProps {
-  theme: 'light' | 'dark';
-  onToggleTheme: () => void;
+  themeMode: ThemeMode;
+  onThemeModeChange: (mode: ThemeMode) => void;
 }
 
+const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
+  { value: 'system', label: 'Sistem' },
+  { value: 'light', label: 'Terang' },
+  { value: 'dark', label: 'Gelap' },
+];
+
 const FALLBACK_DOMAIN = 'gudang.local';
+const WRONG_LOGIN_KEY = 'gudang-wrong-login';
+
+type LoginGroup = 'staff' | 'employee';
+interface PopupState {
+  message: string;
+  target: LoginGroup;
+  buttonLabel: string;
+}
+
+const getPopupFor = (target: LoginGroup): PopupState =>
+  target === 'employee'
+    ? {
+        message: 'Anda adalah karyawan, silakan login akun karyawan.',
+        target: 'employee',
+        buttonLabel: 'Login Akun Karyawan',
+      }
+    : {
+        message: 'Anda adalah Admin/Staf, silakan login di bagian Admin & Staf.',
+        target: 'staff',
+        buttonLabel: 'Login Admin & Staf',
+      };
 
 type Mode = 'login' | 'forgot' | 'register';
 
@@ -28,7 +57,7 @@ const LABEL_CLASS = 'block text-xs font-semibold mb-1.5 text-slate-700 dark:text
 const PRIMARY_BTN_CLASS =
   'w-full py-2.5 px-4 rounded-xl text-sm font-bold bg-slate-600 hover:bg-slate-700 dark:bg-slate-600 dark:hover:bg-slate-500 disabled:opacity-60 text-white transition cursor-pointer';
 
-export function LoginView(_props: LoginViewProps) {
+export function LoginView({ themeMode, onThemeModeChange }: LoginViewProps) {
   const [mode, setMode] = useState<Mode>('login');
 
   // Bagian login: 'staff' = Admin & Staf, 'employee' = Karyawan
@@ -50,7 +79,25 @@ export function LoginView(_props: LoginViewProps) {
   const [isRegistering, setIsRegistering] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState('');
-  const [popupMsg, setPopupMsg] = useState('');
+  // Popup salah tempat login. Disimpan di sessionStorage karena halaman login
+  // sempat tertutup (akun sempat masuk lalu dikeluarkan) dan dibuat ulang.
+  const [popup, setPopup] = useState<PopupState | null>(() => {
+    try {
+      const flag = window.sessionStorage.getItem(WRONG_LOGIN_KEY);
+      if (flag === 'employee' || flag === 'staff') return getPopupFor(flag);
+    } catch {
+      // abaikan jika penyimpanan tidak tersedia
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    try {
+      window.sessionStorage.removeItem(WRONG_LOGIN_KEY);
+    } catch {
+      // abaikan
+    }
+  }, []);
   const [infoMsg, setInfoMsg] = useState(() => {
     try {
       if (window.sessionStorage.getItem('gudang-idle-logout')) {
@@ -138,11 +185,21 @@ export function LoginView(_props: LoginViewProps) {
           const isStaffGroup = role === 'admin' || role === 'staff';
 
           if (role && group === 'staff' && !isStaffGroup) {
+            try {
+              window.sessionStorage.setItem(WRONG_LOGIN_KEY, 'employee');
+            } catch {
+              // abaikan
+            }
             await supabase.auth.signOut();
-            setPopupMs('Akun ini bukan Admin/Staf. Silakan pilih tab Karyawan.');
+            setPopup(getPopupFor('employee'));
           } else if (role && group === 'employee' && isStaffGroup) {
+            try {
+              window.sessionStorage.setItem(WRONG_LOGIN_KEY, 'staff');
+            } catch {
+              // abaikan
+            }
             await supabase.auth.signOut();
-            setErrorMsg('Akun ini Admin/Staf. Silakan pilih tab Admin & Staf.');
+            setPopup(getPopupFor('staff'));
           } else {
             await recordActivity('LOGIN');
           }
@@ -303,6 +360,30 @@ export function LoginView(_props: LoginViewProps) {
   return (
     <div className="min-h-screen flex flex-col justify-center items-center px-4 py-8 bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200">
       <div className="w-full max-w-md rounded-2xl border border-slate-200/70 dark:border-slate-700/50 bg-slate-50/80 dark:bg-slate-800/50 p-6 sm:p-8">
+        <div className="flex justify-end mb-4">
+          <div
+            role="group"
+            aria-label="Pilihan tema"
+            className="inline-flex p-0.5 rounded-xl bg-slate-200/60 dark:bg-slate-900/40"
+          >
+            {THEME_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onThemeModeChange(opt.value)}
+                aria-pressed={themeMode === opt.value}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  themeMode === opt.value
+                    ? 'bg-white/80 text-slate-800 shadow-sm dark:bg-slate-700/60 dark:text-slate-100'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Inventory Warehouse</h1>
@@ -411,18 +492,16 @@ export function LoginView(_props: LoginViewProps) {
               {isSubmitting ? 'Memproses masuk...' : 'Masuk'}
             </button>
 
-            {group === 'employee' && (
-              <p className="text-center text-xs text-slate-600 dark:text-slate-400">
-                Belum punya akun?{' '}
-                <button
-                  type="button"
-                  onClick={() => goToMode('register')}
-                  className="font-semibold text-slate-600 hover:underline dark:text-slate-300 cursor-pointer"
-                >
-                  Daftar
-                </button>
-              </p>
-            )}
+            <p className="text-center text-xs text-slate-600 dark:text-slate-400">
+              Belum punya akun?{' '}
+              <button
+                type="button"
+                onClick={() => goToMode('register')}
+                className="font-semibold text-slate-600 hover:underline dark:text-slate-300 cursor-pointer"
+              >
+                Daftar
+              </button>
+            </p>
           </form>
         )}
 
@@ -570,7 +649,7 @@ export function LoginView(_props: LoginViewProps) {
 
       </div>
 
-      {popupMsg && (
+      {popup && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-slate-900/30 backdrop-blur-sm"
           role="dialog"
@@ -578,16 +657,18 @@ export function LoginView(_props: LoginViewProps) {
         >
           <div className="w-full max-w-sm rounded-2xl border border-slate-200/70 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800 p-6 text-center shadow-lg">
             <h2 className="text-lg font-bold mb-2">Perhatian</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mb-5">{popupMsg}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-5">{popup.message}</p>
             <button
               type="button"
               onClick={() => {
-                setPopupMsg('');
-                switchGroup('employee');
+                const target = popup.target;
+                setPopup(null);
+                setMode('login');
+                switchGroup(target);
               }}
               className={PRIMARY_BTN_CLASS}
             >
-              Login Akun Karyawan
+              {popup.buttonLabel}
             </button>
           </div>
         </div>

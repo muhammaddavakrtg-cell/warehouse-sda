@@ -68,15 +68,25 @@ const NOTIF_STORAGE_KEY = 'gudangpro-custom-notifications';
 const DISMISSED_STOCK_KEY = 'gudangpro-dismissed-stock-notifs';
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
+type ThemeMode = 'system' | 'light' | 'dark';
+
 export default function App() {
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof window !== 'undefined') {
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    try {
       const saved = window.localStorage.getItem('gudangpro-theme');
-      if (saved === 'dark' || saved === 'light') return saved;
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      if (saved === 'dark' || saved === 'light' || saved === 'system') return saved;
+    } catch {
+      // abaikan jika penyimpanan tidak tersedia
     }
-    return 'light';
+    return 'system';
   });
+  const [systemDark, setSystemDark] = useState<boolean>(() =>
+    typeof window !== 'undefined' && window.matchMedia
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      : false
+  );
+  const theme: 'light' | 'dark' =
+    themeMode === 'system' ? (systemDark ? 'dark' : 'light') : themeMode;
 
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -184,29 +194,30 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const root = document.documentElement;
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
+
+  // Pantau perubahan tema sistem (HP/PC)
+  useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
-
-    // Sebelum login: ikut tema sistem (HP/PC) secara otomatis.
-    // Setelah login: pakai pilihan tema pengguna.
-    const apply = () => {
-      const dark = session ? theme === 'dark' : media.matches;
-      root.classList.toggle('dark', dark);
-    };
-
-    apply();
-    if (session) {
-      window.localStorage.setItem('gudangpro-theme', theme);
-    } else {
-      media.addEventListener('change', apply);
-    }
-
-    return () => media.removeEventListener('change', apply);
-  }, [theme, session]);
-
-  const toggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+    const onChange = () => setSystemDark(media.matches);
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
   }, []);
+
+  const changeThemeMode = useCallback((mode: ThemeMode) => {
+    setThemeMode(mode);
+    try {
+      window.localStorage.setItem('gudangpro-theme', mode);
+    } catch {
+      // abaikan
+    }
+  }, []);
+
+  // Dipakai tombol tema di dalam aplikasi: balik terang <-> gelap
+  const toggleTheme = useCallback(() => {
+    changeThemeMode(theme === 'dark' ? 'light' : 'dark');
+  }, [theme, changeThemeMode]);
 
   useEffect(() => {
     if (!supabase) {
@@ -788,7 +799,7 @@ export default function App() {
   if (!session) {
     return (
       <>
-        <LoginView theme={theme} onToggleTheme={toggleTheme} />
+        <LoginView themeMode={themeMode} onThemeModeChange={changeThemeMode} />
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       </>
     );
