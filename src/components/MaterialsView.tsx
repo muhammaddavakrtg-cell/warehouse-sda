@@ -7,6 +7,7 @@ import {
   MapPin,
   Plus,
   Search,
+  Trash2,
   X,
 } from 'lucide-react';
 import type {
@@ -29,6 +30,7 @@ interface MaterialsViewProps {
   canEdit?: boolean;
   canExport?: boolean;
   readOnly?: boolean;
+  onDeleteMaterial?: (material: Material) => void;
 }
 
 const CATEGORIES: ('ALL' | MaterialCategory)[] = [
@@ -57,6 +59,7 @@ export function MaterialsView({
   onQuickTransaction,
   canExport = false,
   readOnly = false,
+  onDeleteMaterial,
 }: MaterialsViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'ALL' | MaterialCategory>('ALL');
@@ -288,15 +291,26 @@ export function MaterialsView({
                   </div>
 
                   {!readOnly && (
-                  <div>
+                  <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => onEditMaterial(item)}
-                      className="w-full inline-flex items-center justify-center gap-2 min-h-[38px] px-3 rounded-lg text-xs font-bold border border-[#CBD5E1] dark:border-[#374151] text-[#0F172A] dark:text-[#F9FAFB] hover:bg-slate-100 dark:hover:bg-gray-800 cursor-pointer"
+                      className="flex-1 inline-flex items-center justify-center gap-2 min-h-[38px] px-3 rounded-lg text-xs font-bold border border-[#CBD5E1] dark:border-[#374151] text-[#0F172A] dark:text-[#F9FAFB] hover:bg-slate-100 dark:hover:bg-gray-800 cursor-pointer"
                     >
                       <Edit3 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                       <span>Edit Material & Stok</span>
                     </button>
+                    {onDeleteMaterial && item.currentStock <= 0 && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteMaterial(item)}
+                        aria-label={`Hapus ${item.name}`}
+                        className="inline-flex items-center justify-center gap-2 min-h-[38px] px-3 rounded-lg text-xs font-bold border border-[#FCA5A5] dark:border-[#991B1B] text-[#B91C1C] dark:text-[#F87171] hover:bg-[#FEE2E2] dark:hover:bg-[#7F1D1D]/40 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                        <span>Hapus</span>
+                      </button>
+                    )}
                   </div>
                   )}
                 </article>
@@ -355,7 +369,7 @@ export function MaterialsView({
                         </td>
                         {!readOnly && (
                         <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                          <div className="inline-flex items-center justify-end">
+                          <div className="inline-flex items-center justify-end gap-2">
                             <button
                               type="button"
                               onClick={() => onEditMaterial(item)}
@@ -365,6 +379,17 @@ export function MaterialsView({
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
+                            {onDeleteMaterial && item.currentStock <= 0 && (
+                              <button
+                                type="button"
+                                onClick={() => onDeleteMaterial(item)}
+                                title="Hapus material yang sudah habis"
+                                aria-label={`Hapus ${item.name}`}
+                                className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-[#FCA5A5] dark:border-[#991B1B] text-[#B91C1C] dark:text-[#F87171] hover:bg-[#FEE2E2] dark:hover:bg-[#7F1D1D]/40 cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                         )}

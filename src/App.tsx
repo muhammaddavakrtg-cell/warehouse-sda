@@ -4,7 +4,7 @@ import { ActivityLogPanel } from './components/ActivityLogPanel';
 import { AppShell, type NavTab } from './components/AppShell';
 import { DashboardView } from './components/DashboardView';
 import { LoginView } from './components/LoginView';
-import { LogbookView } from './components/LogbookView';
+import { LogbookPage, type DeletedMaterialLog } from './components/LogbookPage';
 import { MaterialFormModal } from './components/MaterialFormModal';
 import { MaterialsView } from './components/MaterialsView';
 import type { NotificationItem } from './components/NotificationBell';
@@ -63,6 +63,20 @@ function mapLogRow(row: any, material?: Material): StockLog {
   };
 }
 
+function mapDeletedRow(row: any): DeletedMaterialLog {
+  return {
+    id: row.id,
+    qcode: row.material_qcode ?? '-',
+    name: row.material_name ?? '-',
+    description: row.material_description ?? '',
+    category: row.category ?? '',
+    unit: row.unit ?? '',
+    location: row.location ?? '',
+    deletedBy: row.deleted_by_name ?? '',
+    deletedAt: row.deleted_at ?? '',
+  };
+}
+
 const IDLE_LIMIT_MINUTES = 30;
 const NOTIF_STORAGE_KEY = 'gudangpro-custom-notifications';
 const DISMISSED_STOCK_KEY = 'gudangpro-dismissed-stock-notifs';
@@ -100,6 +114,7 @@ export default function App() {
   const [materialsStatusFilter, setMaterialsStatusFilter] = useState<StockStatus | 'ALL'>('ALL');
   const [materials, setMaterials] = useState<Material[]>([]);
   const [logs, setLogs] = useState<StockLog[]>([]);
+  const [deletedMaterials, setDeletedMaterials] = useState<DeletedMaterialLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
@@ -325,6 +340,7 @@ export default function App() {
     if (!supabase || !session) {
       setMaterials([]);
       setLogs([]);
+      setDeletedMaterials([]);
       setIsLoading(false);
       return;
     }
@@ -351,6 +367,17 @@ export default function App() {
           mapLogRow(row, materialsById.get(row.material_id))
         )
       );
+
+      // Riwayat material habis yang dihapus (hanya terbaca oleh Admin/Staf)
+      try {
+        const delRes = await supabase
+          .from('material_deletion_log')
+          .select('*')
+          .order('deleted_at', { ascending: false });
+        setDeletedMaterials(delRes.error ? [] : (delRes.data ?? []).map(mapDeletedRow));
+      } catch {
+        setDeletedMaterials([]);
+      }
     } catch (err: any) {
       setLoadError(err?.message || 'Terjadi kesalahan saat memuat data.');
     } finally {
@@ -499,6 +526,44 @@ export default function App() {
       setTxModalOpen(true);
     },
     [canEdit, isStaffLevel, materials, pushToast]
+  );
+
+  const handleDeleteMaterial = useCallback(
+    async (material: Material) => {
+      if (!supabase) return;
+
+      if (!isStaffLevel || !canEdit) {
+        pushToast('info', 'Tidak Diizinkan', 'Hanya Admin atau Staf yang dapat menghapus material.');
+        return;
+      }
+
+      if (material.currentStock > 0) {
+        pushToast('info', 'Stok Belum Habis', 'Hanya material yang stoknya habis (0) yang dapat dihapus.');
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `Hapus material ${material.qcode} - ${material.name}?\n\nMaterial akan dihapus dari daftar dan dicatat di Riwayat Material Habis.`
+      );
+      if (!confirmed) return;
+
+      const { error } = await supabase.rpc('delete_empty_material', {
+        p_material_id: material.id,
+      });
+
+      if (error) {
+        pushToast('error', 'Gagal menghapus material', error.message);
+        return;
+      }
+
+      await fetchWarehouseData();
+      pushToast(
+        'success',
+        'Material dihapus',
+        `${material.qcode} - ${material.name} dicatat di Riwayat Material Habis.`
+      );
+    },
+    [canEdit, isStaffLevel, fetchWarehouseData, pushToast]
   );
 
   const handleNavigateMaterials = useCallback((statusFilter: StockStatus | 'ALL' = 'ALL') => {
@@ -894,6 +959,7 @@ export default function App() {
             canEdit={canEdit}
             canExport={canExport}
             readOnly={!isStaffLevel}
+            onDeleteMaterial={isStaffLevel && canEdit ? handleDeleteMaterial : undefined}
             onAddMaterial={() => {
               if (!canEdit) {
                 pushToast(
@@ -922,7 +988,9 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'logbook' && isStaffLevel && <LogbookView logs={logs} canExport={canExport} />}
+        {activeTab === 'logbook' && isStaffLevel && (
+          <LogbookPage logs={logs} deletedMaterials={deletedMaterials} canExport={canExport} />
+        )}
         {activeTab === 'activity' && (profile?.role === 'admin' || profile?.role === 'staff') && (
           <ActivityLogPanel profile={profile} onNotify={pushToast} />
         )}
