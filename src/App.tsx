@@ -64,6 +64,7 @@ function mapLogRow(row: any, material?: Material): StockLog {
 }
 
 const IDLE_LIMIT_MINUTES = 30;
+const IDLE_STORAGE_KEY = 'gudangpro-last-activity';
 const NOTIF_STORAGE_KEY = 'gudangpro-custom-notifications';
 const DISMISSED_STOCK_KEY = 'gudangpro-dismissed-stock-notifs';
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -329,34 +330,74 @@ export default function App() {
   }, [fetchWarehouseData]);
 
   const handleLogout = useCallback(async (event: 'LOGOUT' | 'LOGOUT_IDLE' = 'LOGOUT') => {
+    try {
+      window.localStorage.removeItem(IDLE_STORAGE_KEY);
+    } catch {
+      // abaikan jika storage tidak tersedia
+    }
+
     if (supabase) {
       try {
-        await supabase.rpc('log_activity', {
-          p_event: event,
-          p_user_agent: navigator.userAgent,
-        });
+        await Promise.race([
+          supabase.rpc('log_activity', {
+            p_event: event,
+            p_user_agent: navigator.userAgent,
+          }),
+          new Promise((resolve) => window.setTimeout(resolve, 2500)),
+        ]);
       } catch {
         // abaikan jika pencatatan gagal
       }
-      await supabase.auth.signOut();
+
+      try {
+        await Promise.race([
+          supabase.auth.signOut({ scope: 'local' }),
+          new Promise((resolve) => window.setTimeout(resolve, 2500)),
+        ]);
+      } catch {
+        // abaikan jika signOut gagal
+      }
+    }
+ try {
+      window.localStorage.removeItem('gudang-last-activity');
+    } catch {
+      // abaikan
     }
     setSession(null);
     setProfile(null);
     setActiveTab('dashboard');
   }, []);
 
-  useEffect(() => {
+      useEffect(() => {
     if (!session) return;
 
     const IDLE_LIMIT_MS = IDLE_LIMIT_MINUTES * 60 * 1000;
-    let lastActivity = Date.now();
+    const ACTIVITY_KEY = 'gudang-last-activity';
+    let lastWrite = 0;
+
+    const readLast = () => {
+      try {
+        return Number(window.localStorage.getItem(ACTIVITY_KEY)) || 0;
+      } catch {
+        return 0;
+      }
+    };
 
     const markActive = () => {
-      lastActivity = Date.now();
+      const now = Date.now();
+      if (now - lastWrite < 5000) return; // hemat penulisan
+      lastWrite = now;
+      try {
+        window.localStorage.setItem(ACTIVITY_KEY, String(now));
+      } catch {
+        // abaikan jika penyimpanan tidak tersedia
+      }
     };
 
     const checkIdle = () => {
-      if (Date.now() - lastActivity >= IDLE_LIMIT_MS) {
+      if (document.visibilityState === 'hidden') return;
+      const last = readLast();
+      if (last && Date.now() - last >= IDLE_LIMIT_MS) {
         try {
           window.sessionStorage.setItem('gudang-idle-logout', '1');
         } catch {
@@ -366,14 +407,50 @@ export default function App() {
       }
     };
 
+    // cek langsung saat web dibuka; kalau belum lewat batas, tandai aktif
+    checkIdle();
+    if (!readLast() || Date.now() - readLast() < IDLE_LIMIT_MS) {
+      lastWrite = 0;
+      markActive();
+    }
+
     const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
     events.forEach((ev) => window.addEventListener(ev, markActive, { passive: true }));
     document.addEventListener('visibilitychange', checkIdle);
+    window.addEventListener('pageshow', checkIdle);
+    window.addEventListener('focus', checkIdle);
     const intervalId = window.setInterval(checkIdle, 15000);
 
     return () => {
       events.forEach((ev) => window.removeEventListener(ev, markActive));
       document.removeEventListener('visibilitychange', checkIdle);
+      window.removeEventListener('pageshow', checkIdle);
+      window.removeEventListener('focus', checkIdle);
+      window.clearInterval(intervalId);
+    };
+  }, [session, handleLogout]);
+
+    readLastActivity();
+    checkIdle();
+
+    const events: Array<keyof WindowEventMap> = [
+      'mousemove',
+      'mousedown',
+      'keydown',
+      'scroll',
+      'touchstart',
+      'click',
+    ];
+
+    events.forEach((ev) => window.addEventListener(ev, markActive, { passive: true }));
+    document.addEventListener('visibilitychange', checkIdle);
+    window.addEventListener('focus', checkIdle);
+    const intervalId = window.setInterval(checkIdle, 5000);
+
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, markActive));
+      document.removeEventListener('visibilitychange', checkIdle);
+      window.removeEventListener('focus', checkIdle);
       window.clearInterval(intervalId);
     };
   }, [session, handleLogout]);
@@ -546,7 +623,6 @@ export default function App() {
     },
     [assertCanEdit, materials, profile, session, fetchWarehouseData, pushToast]
   );
-
   const handleUpdateMaterial = useCallback(
     async (
       id: string,
@@ -752,9 +828,9 @@ export default function App() {
   return (
     <>
       <AppShell
-      materials={materials}
-     logs={logs}
-     onQuickRestock={(materialId) => handleOpenTransaction('MASUK', materialId)}
+        materials={materials}
+        logs={logs}
+        onQuickRestock={(materialId) => handleOpenTransaction('MASUK', materialId)}
         activeTab={activeTab}
         onTabChange={setActiveTab}
         theme={theme}
@@ -971,7 +1047,7 @@ export default function App() {
         </div>
       )}
 
-  <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </>
   );
 }
