@@ -63,8 +63,7 @@ function mapLogRow(row: any, material?: Material): StockLog {
   };
 }
 
-const IDLE_LIMIT_MINUTES = 30;
-const IDLE_STORAGE_KEY = 'gudangpro-last-activity';
+const IDLE_LIMIT_MINUTES = 1;
 const NOTIF_STORAGE_KEY = 'gudangpro-custom-notifications';
 const DISMISSED_STOCK_KEY = 'gudangpro-dismissed-stock-notifs';
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -330,35 +329,18 @@ export default function App() {
   }, [fetchWarehouseData]);
 
   const handleLogout = useCallback(async (event: 'LOGOUT' | 'LOGOUT_IDLE' = 'LOGOUT') => {
-    try {
-      window.localStorage.removeItem(IDLE_STORAGE_KEY);
-    } catch {
-      // abaikan jika storage tidak tersedia
-    }
-
     if (supabase) {
       try {
-        await Promise.race([
-          supabase.rpc('log_activity', {
-            p_event: event,
-            p_user_agent: navigator.userAgent,
-          }),
-          new Promise((resolve) => window.setTimeout(resolve, 2500)),
-        ]);
+        await supabase.rpc('log_activity', {
+          p_event: event,
+          p_user_agent: navigator.userAgent,
+        });
       } catch {
         // abaikan jika pencatatan gagal
       }
-
-      try {
-        await Promise.race([
-          supabase.auth.signOut({ scope: 'local' }),
-          new Promise((resolve) => window.setTimeout(resolve, 2500)),
-        ]);
-      } catch {
-        // abaikan jika signOut gagal
-      }
+      await supabase.auth.signOut();
     }
- try {
+    try {
       window.localStorage.removeItem('gudang-last-activity');
     } catch {
       // abaikan
@@ -368,7 +350,7 @@ export default function App() {
     setActiveTab('dashboard');
   }, []);
 
-      useEffect(() => {
+  useEffect(() => {
     if (!session) return;
 
     const IDLE_LIMIT_MS = IDLE_LIMIT_MINUTES * 60 * 1000;
@@ -425,31 +407,6 @@ export default function App() {
       events.forEach((ev) => window.removeEventListener(ev, markActive));
       document.removeEventListener('visibilitychange', checkIdle);
       window.removeEventListener('pageshow', checkIdle);
-      window.removeEventListener('focus', checkIdle);
-      window.clearInterval(intervalId);
-    };
-  }, [session, handleLogout]);
-
-    readLastActivity();
-    checkIdle();
-
-    const events: Array<keyof WindowEventMap> = [
-      'mousemove',
-      'mousedown',
-      'keydown',
-      'scroll',
-      'touchstart',
-      'click',
-    ];
-
-    events.forEach((ev) => window.addEventListener(ev, markActive, { passive: true }));
-    document.addEventListener('visibilitychange', checkIdle);
-    window.addEventListener('focus', checkIdle);
-    const intervalId = window.setInterval(checkIdle, 5000);
-
-    return () => {
-      events.forEach((ev) => window.removeEventListener(ev, markActive));
-      document.removeEventListener('visibilitychange', checkIdle);
       window.removeEventListener('focus', checkIdle);
       window.clearInterval(intervalId);
     };
@@ -623,6 +580,7 @@ export default function App() {
     },
     [assertCanEdit, materials, profile, session, fetchWarehouseData, pushToast]
   );
+
   const handleUpdateMaterial = useCallback(
     async (
       id: string,
@@ -828,9 +786,9 @@ export default function App() {
   return (
     <>
       <AppShell
-        materials={materials}
-        logs={logs}
-        onQuickRestock={(materialId) => handleOpenTransaction('MASUK', materialId)}
+      materials={materials}
+     logs={logs}
+     onQuickRestock={(materialId) => handleOpenTransaction('MASUK', materialId)}
         activeTab={activeTab}
         onTabChange={setActiveTab}
         theme={theme}
@@ -1047,7 +1005,7 @@ export default function App() {
         </div>
       )}
 
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+  <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </>
   );
 }
