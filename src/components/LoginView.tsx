@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 type ThemeMode = 'system' | 'light' | 'dark';
@@ -6,16 +6,48 @@ type ThemeMode = 'system' | 'light' | 'dark';
 interface LoginViewProps {
   themeMode: ThemeMode;
   onThemeModeChange: (mode: ThemeMode) => void;
+  onLoginGuard?: (active: boolean) => void;
 }
 
-const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
-  { value: 'system', label: 'Sistem' },
-  { value: 'light', label: 'Terang' },
-  { value: 'dark', label: 'Gelap' },
+const ICON_PROPS = {
+  width: 16,
+  height: 16,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+  'aria-hidden': true,
+};
+
+const SystemIcon = () => (
+  <svg {...ICON_PROPS}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" />
+  </svg>
+);
+
+const SunIcon = () => (
+  <svg {...ICON_PROPS}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+  </svg>
+);
+
+const MoonIcon = () => (
+  <svg {...ICON_PROPS}>
+    <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+  </svg>
+);
+
+const THEME_OPTIONS: { value: ThemeMode; label: string; icon: ReactNode }[] = [
+  { value: 'system', label: 'Ikuti sistem', icon: <SystemIcon /> },
+  { value: 'light', label: 'Mode terang', icon: <SunIcon /> },
+  { value: 'dark', label: 'Mode gelap', icon: <MoonIcon /> },
 ];
 
 const FALLBACK_DOMAIN = 'gudang.local';
-const WRONG_LOGIN_KEY = 'gudang-wrong-login';
 
 type LoginGroup = 'staff' | 'employee';
 interface PopupState {
@@ -57,7 +89,7 @@ const LABEL_CLASS = 'block text-xs font-semibold mb-1.5 text-slate-700 dark:text
 const PRIMARY_BTN_CLASS =
   'w-full py-2.5 px-4 rounded-xl text-sm font-bold bg-slate-600 hover:bg-slate-700 dark:bg-slate-600 dark:hover:bg-slate-500 disabled:opacity-60 text-white transition cursor-pointer';
 
-export function LoginView({ themeMode, onThemeModeChange }: LoginViewProps) {
+export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginViewProps) {
   const [mode, setMode] = useState<Mode>('login');
 
   // Bagian login: 'staff' = Admin & Staf, 'employee' = Karyawan
@@ -79,25 +111,8 @@ export function LoginView({ themeMode, onThemeModeChange }: LoginViewProps) {
   const [isRegistering, setIsRegistering] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState('');
-  // Popup salah tempat login. Disimpan di sessionStorage karena halaman login
-  // sempat tertutup (akun sempat masuk lalu dikeluarkan) dan dibuat ulang.
-  const [popup, setPopup] = useState<PopupState | null>(() => {
-    try {
-      const flag = window.sessionStorage.getItem(WRONG_LOGIN_KEY);
-      if (flag === 'employee' || flag === 'staff') return getPopupFor(flag);
-    } catch {
-      // abaikan jika penyimpanan tidak tersedia
-    }
-    return null;
-  });
-
-  useEffect(() => {
-    try {
-      window.sessionStorage.removeItem(WRONG_LOGIN_KEY);
-    } catch {
-      // abaikan
-    }
-  }, []);
+  // Popup salah tempat login (akun karyawan di tab Admin/Staf, atau sebaliknya)
+  const [popup, setPopup] = useState<PopupState | null>(null);
   const [infoMsg, setInfoMsg] = useState(() => {
     try {
       if (window.sessionStorage.getItem('gudang-idle-logout')) {
@@ -158,6 +173,8 @@ export function LoginView({ themeMode, onThemeModeChange }: LoginViewProps) {
     }
 
     setIsSubmitting(true);
+    // Tahan halaman login selama level akun dicek, supaya dashboard tidak sempat tampil
+    onLoginGuard?.(true);
 
     try {
       const resolvedEmail = await resolveEmailByUsername(username);
@@ -185,19 +202,9 @@ export function LoginView({ themeMode, onThemeModeChange }: LoginViewProps) {
           const isStaffGroup = role === 'admin' || role === 'staff';
 
           if (role && group === 'staff' && !isStaffGroup) {
-            try {
-              window.sessionStorage.setItem(WRONG_LOGIN_KEY, 'employee');
-            } catch {
-              // abaikan
-            }
             await supabase.auth.signOut();
             setPopup(getPopupFor('employee'));
           } else if (role && group === 'employee' && isStaffGroup) {
-            try {
-              window.sessionStorage.setItem(WRONG_LOGIN_KEY, 'staff');
-            } catch {
-              // abaikan
-            }
             await supabase.auth.signOut();
             setPopup(getPopupFor('staff'));
           } else {
@@ -209,6 +216,7 @@ export function LoginView({ themeMode, onThemeModeChange }: LoginViewProps) {
       setErrorMsg(err?.message || 'Gagal menghubungi server autentikasi.');
     } finally {
       setIsSubmitting(false);
+      onLoginGuard?.(false);
     }
   };
 
@@ -372,13 +380,15 @@ export function LoginView({ themeMode, onThemeModeChange }: LoginViewProps) {
                 type="button"
                 onClick={() => onThemeModeChange(opt.value)}
                 aria-pressed={themeMode === opt.value}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                aria-label={opt.label}
+                title={opt.label}
+                className={`flex items-center justify-center w-8 h-7 rounded-lg transition cursor-pointer ${
                   themeMode === opt.value
                     ? 'bg-white/80 text-slate-800 shadow-sm dark:bg-slate-700/60 dark:text-slate-100'
                     : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
                 }`}
               >
-                {opt.label}
+                {opt.icon}
               </button>
             ))}
           </div>

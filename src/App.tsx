@@ -90,6 +90,8 @@ export default function App() {
 
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  // Selama pengecekan level akun saat login, tetap tampilkan halaman login (tanpa kedip dashboard)
+  const [loginGuard, setLoginGuard] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [, setProfileLoading] = useState(false);
@@ -796,10 +798,14 @@ export default function App() {
     );
   }
 
-  if (!session) {
+  if (!session || loginGuard) {
     return (
       <>
-        <LoginView themeMode={themeMode} onThemeModeChange={changeThemeMode} />
+        <LoginView
+          themeMode={themeMode}
+          onThemeModeChange={changeThemeMode}
+          onLoginGuard={setLoginGuard}
+        />
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       </>
     );
