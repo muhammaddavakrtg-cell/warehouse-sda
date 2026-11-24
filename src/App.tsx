@@ -63,7 +63,7 @@ function mapLogRow(row: any, material?: Material): StockLog {
   };
 }
 
-const IDLE_LIMIT_MINUTES = 1;
+const IDLE_LIMIT_MINUTES = 30;
 const NOTIF_STORAGE_KEY = 'gudangpro-custom-notifications';
 const DISMISSED_STOCK_KEY = 'gudangpro-dismissed-stock-notifs';
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
@@ -185,13 +185,24 @@ export default function App() {
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+
+    // Sebelum login: ikut tema sistem (HP/PC) secara otomatis.
+    // Setelah login: pakai pilihan tema pengguna.
+    const apply = () => {
+      const dark = session ? theme === 'dark' : media.matches;
+      root.classList.toggle('dark', dark);
+    };
+
+    apply();
+    if (session) {
+      window.localStorage.setItem('gudangpro-theme', theme);
     } else {
-      root.classList.remove('dark');
+      media.addEventListener('change', apply);
     }
-    window.localStorage.setItem('gudangpro-theme', theme);
-  }, [theme]);
+
+    return () => media.removeEventListener('change', apply);
+  }, [theme, session]);
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));

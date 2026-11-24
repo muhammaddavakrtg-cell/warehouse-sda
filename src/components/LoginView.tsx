@@ -23,12 +23,12 @@ const recordActivity = async (event: string) => {
 };
 
 const INPUT_CLASS =
-  'w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500';
+  'w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-200 dark:border-slate-700/70 bg-white/60 dark:bg-slate-900/40 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 focus:border-slate-300 dark:focus:border-slate-600';
 const LABEL_CLASS = 'block text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-300';
 const PRIMARY_BTN_CLASS =
-  'w-full py-2.5 px-4 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white transition cursor-pointer';
+  'w-full py-2.5 px-4 rounded-xl text-sm font-bold bg-slate-600 hover:bg-slate-700 dark:bg-slate-600 dark:hover:bg-slate-500 disabled:opacity-60 text-white transition cursor-pointer';
 
-export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
+export function LoginView(_props: LoginViewProps) {
   const [mode, setMode] = useState<Mode>('login');
 
   // Bagian login: 'staff' = Admin & Staf, 'employee' = Karyawan
@@ -296,25 +296,18 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
   const tabClass = (active: boolean) =>
     `py-2 rounded-lg text-sm font-semibold transition cursor-pointer ${
       active
-        ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-white'
+        ? 'bg-white/80 text-slate-800 shadow-sm dark:bg-slate-700/60 dark:text-slate-100'
         : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
     }`;
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center px-4 py-8 bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-sm">
+    <div className="min-h-screen flex flex-col justify-center items-center px-4 py-8 bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200/70 dark:border-slate-700/50 bg-slate-50/80 dark:bg-slate-800/50 p-6 sm:p-8">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Inventory Warehouse</h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>
           </div>
-          <button
-            type="button"
-            onClick={onToggleTheme}
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-          >
-            {theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
-          </button>
         </div>
 
         {(!supabase || !isSupabaseConfigured) && (
@@ -346,7 +339,7 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
         )}
 
         {mode === 'login' && (
-          <div className="grid grid-cols-2 gap-1 p-1 mb-5 rounded-xl bg-slate-100 dark:bg-slate-800">
+          <div className="grid grid-cols-2 gap-1 p-1 mb-5 rounded-xl bg-slate-200/60 dark:bg-slate-900/40">
             <button
               type="button"
               onClick={() => switchGroup('staff')}
@@ -393,7 +386,7 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
                 <button
                   type="button"
                   onClick={() => goToMode('forgot')}
-                  className="text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400 cursor-pointer"
+                  className="text-xs font-semibold text-slate-600 hover:underline dark:text-slate-300 cursor-pointer"
                 >
                   Lupa password?
                 </button>
@@ -424,7 +417,7 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
                 <button
                   type="button"
                   onClick={() => goToMode('register')}
-                  className="font-semibold text-blue-600 hover:underline dark:text-blue-400 cursor-pointer"
+                  className="font-semibold text-slate-600 hover:underline dark:text-slate-300 cursor-pointer"
                 >
                   Daftar
                 </button>
@@ -579,11 +572,11 @@ export function LoginView({ theme, onToggleTheme }: LoginViewProps) {
 
       {popupMsg && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/50"
+          className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-slate-900/30 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-sm rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 text-center shadow-xl">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200/70 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800 p-6 text-center shadow-lg">
             <h2 className="text-lg font-bold mb-2">Perhatian</h2>
             <p className="text-sm text-slate-600 dark:text-slate-300 mb-5">{popupMsg}</p>
             <button
