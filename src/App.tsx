@@ -302,6 +302,16 @@ export default function App() {
   }, [session]);
 
   const canEdit = Boolean(profile?.canEdit);
+  // Karyawan hanya melihat dan mencari stok material.
+  // Dashboard, logbook, unduhan, tambah/edit material dan catat transaksi khusus Admin & Staf.
+  const isStaffLevel = profile?.role === 'admin' || profile?.role === 'staff';
+  const canExport = isStaffLevel;
+
+  useEffect(() => {
+    if (profile && !isStaffLevel && activeTab !== 'materials' && activeTab !== 'profile') {
+      setActiveTab('materials');
+    }
+  }, [profile, isStaffLevel, activeTab]);
 
   const assertCanEdit = useCallback(() => {
     if (!canEdit) {
@@ -467,6 +477,11 @@ export default function App() {
 
   const handleOpenTransaction = useCallback(
     (type: TransactionType, materialId?: string) => {
+      if (!isStaffLevel) {
+        pushToast('info', 'Hanya Lihat', 'Akun karyawan hanya dapat melihat dan mencari stok material.');
+        return;
+      }
+
       if (!canEdit) {
         pushToast('info', 'Mode Hanya Lihat', 'Akun Anda tidak memiliki izin mencatat transaksi.');
         return;
@@ -483,7 +498,7 @@ export default function App() {
       setTxInitialMaterialId(materialId);
       setTxModalOpen(true);
     },
-    [canEdit, materials, pushToast]
+    [canEdit, isStaffLevel, materials, pushToast]
   );
 
   const handleNavigateMaterials = useCallback((statusFilter: StockStatus | 'ALL' = 'ALL') => {
@@ -859,7 +874,7 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === 'dashboard' && (
+        {activeTab === 'dashboard' && isStaffLevel && (
           <DashboardView
             materials={materials}
             logs={logs}
@@ -877,6 +892,8 @@ export default function App() {
             statusFilter={materialsStatusFilter}
             onStatusFilterChange={setMaterialsStatusFilter}
             canEdit={canEdit}
+            canExport={canExport}
+            readOnly={!isStaffLevel}
             onAddMaterial={() => {
               if (!canEdit) {
                 pushToast(
@@ -905,7 +922,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'logbook' && <LogbookView logs={logs} />}
+        {activeTab === 'logbook' && isStaffLevel && <LogbookView logs={logs} canExport={canExport} />}
         {activeTab === 'activity' && (profile?.role === 'admin' || profile?.role === 'staff') && (
           <ActivityLogPanel profile={profile} onNotify={pushToast} />
         )}

@@ -7,9 +7,10 @@ import { TransactionBadge } from './StatusBadge';
 
 interface LogbookViewProps {
   logs: StockLog[];
+  canExport?: boolean;
 }
 
-export function LogbookView({ logs }: LogbookViewProps) {
+export function LogbookView({ logs, canExport = false }: LogbookViewProps) {
   const [typeFilter, setTypeFilter] = useState<'SEMUA' | TransactionType>('SEMUA');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -150,6 +151,7 @@ export function LogbookView({ logs }: LogbookViewProps) {
             />
           </div>
 
+          {canExport && (
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               type="button"
@@ -172,6 +174,7 @@ export function LogbookView({ logs }: LogbookViewProps) {
               <span>{exporting === 'excel' ? 'Membuat Excel...' : 'Excel Material Keluar'}</span>
             </button>
           </div>
+          )}
         </div>
 
         {/* Type Filter + Date Presets + Summary */}

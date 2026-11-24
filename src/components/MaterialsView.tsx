@@ -26,6 +26,9 @@ interface MaterialsViewProps {
   onAddMaterial: () => void;
   onEditMaterial: (material: Material) => void;
   onQuickTransaction: (type: TransactionType, materialId: string) => void;
+  canEdit?: boolean;
+  canExport?: boolean;
+  readOnly?: boolean;
 }
 
 const CATEGORIES: ('ALL' | MaterialCategory)[] = [
@@ -52,6 +55,8 @@ export function MaterialsView({
   onAddMaterial,
   onEditMaterial,
   onQuickTransaction,
+  canExport = false,
+  readOnly = false,
 }: MaterialsViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'ALL' | MaterialCategory>('ALL');
@@ -139,6 +144,7 @@ export function MaterialsView({
           </select>
 
           {/* Add Material CTA */}
+          {!readOnly && (
           <button
             type="button"
             onClick={onAddMaterial}
@@ -147,6 +153,7 @@ export function MaterialsView({
             <Plus className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>Tambah Material</span>
           </button>
+          )}
         </div>
 
         {/* Status Segmented Tabs */}
@@ -182,6 +189,7 @@ export function MaterialsView({
               Menampilkan <strong className="text-[#0F172A] dark:text-[#F9FAFB]">{filteredMaterials.length}</strong> dari{' '}
               {materials.length} material
             </p>
+            {canExport && (
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -204,6 +212,7 @@ export function MaterialsView({
                 <span>{exporting === 'excel' ? 'Membuat Excel...' : 'Unduh Excel'}</span>
               </button>
             </div>
+            )}
           </div>
         </div>
       </div>
@@ -278,6 +287,7 @@ export function MaterialsView({
                     </div>
                   </div>
 
+                  {!readOnly && (
                   <div>
                     <button
                       type="button"
@@ -288,6 +298,7 @@ export function MaterialsView({
                       <span>Edit Material & Stok</span>
                     </button>
                   </div>
+                  )}
                 </article>
               );
             })}
@@ -305,7 +316,7 @@ export function MaterialsView({
                     <th className="py-3.5 px-4 text-right whitespace-nowrap">Stok Saat Ini</th>
                     <th className="py-3.5 px-4 text-right whitespace-nowrap">Min. Stok</th>
                     <th className="py-3.5 px-4 whitespace-nowrap">Status</th>
-                    <th className="py-3.5 px-4 text-right whitespace-nowrap">Aksi</th>
+                    {!readOnly && <th className="py-3.5 px-4 text-right whitespace-nowrap">Aksi</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#CBD5E1] dark:divide-[#374151] text-sm">
@@ -342,6 +353,7 @@ export function MaterialsView({
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           <StockStatusBadge status={status} />
                         </td>
+                        {!readOnly && (
                         <td className="py-3.5 px-4 text-right whitespace-nowrap">
                           <div className="inline-flex items-center justify-end">
                             <button
@@ -355,6 +367,7 @@ export function MaterialsView({
                             </button>
                           </div>
                         </td>
+                        )}
                       </tr>
                     );
                   })}
