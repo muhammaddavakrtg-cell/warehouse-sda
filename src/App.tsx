@@ -917,6 +917,9 @@ export default function App() {
         canManageUsers={profile?.role === 'admin' || profile?.role === 'staff'}
         userName={profile?.fullName || profile?.username || session.user.email || ''}
         roleLabel={getAccessRoleLabel(profile?.role)}
+        userName={profile?.fullName || profile?.username || session.user.email || ''}
+        avatarUrl={profile?.avatarUrl || ''}
+        roleLabel={getAccessRoleLabel(profile?.role)}
         onLogout={() => setLogoutConfirmOpen(true)}
         notifications={notifications}
         onOpenNotifications={() => handleNavigateMaterials('ALL')}

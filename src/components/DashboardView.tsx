@@ -1,3 +1,4 @@
+import Avatar from "./Avatar";
 import { useState } from 'react';
 import {
   Activity,

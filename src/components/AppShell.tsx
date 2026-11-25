@@ -42,6 +42,7 @@ interface AppShellProps {
   logs?: StockLog[];
   onQuickRestock?: (materialId: string) => void;
   children: ReactNode;
+  avatarUrl?: string;
 }
 
 const NAV_ITEMS: { id: NavTab; label: string; mobileLabel: string; icon: typeof LayoutDashboard }[] = [
@@ -62,6 +63,7 @@ export function AppShell({
   criticalCount,
   canManageUsers = false,
   userName,
+  avatarUrl,
   roleLabel,
   onLogout,
   notifications = [],
@@ -78,6 +80,17 @@ export function AppShell({
   );
   const currentTitle = NAV_ITEMS.find((n) => n.id === activeTab)?.label ?? 'Dashboard';
   const userInitial = (userName || 'U').charAt(0).toUpperCase();
+  const avatarNode = avatarUrl ? (
+    <img
+      src={avatarUrl}
+      alt={userName}
+      className="w-9 h-9 rounded-full object-cover border border-[#CBD5E1] dark:border-[#374151] shrink-0"
+    />
+  ) : (
+    <div className="w-9 h-9 rounded-full bg-blue-50 text-[#1D4ED8] dark:bg-blue-950/60 dark:text-[#3B82F6] flex items-center justify-center text-sm font-bold shrink-0">
+      {userInitial}
+    </div>
+  );
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileCalendarOpen, setMobileCalendarOpen] = useState(false);
@@ -228,9 +241,7 @@ export function AppShell({
         <div className="p-4 border-t border-[#CBD5E1] dark:border-[#374151] space-y-3">
           {userName && (
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-blue-50 text-[#1D4ED8] dark:bg-blue-950/60 dark:text-[#3B82F6] flex items-center justify-center text-sm font-bold shrink-0">
-                {userInitial}
-              </div>
+              {avatarNode}
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold truncate">{userName}</p>
                 <p className="text-xs font-semibold text-[#1D4ED8] dark:text-[#3B82F6] truncate">
@@ -378,9 +389,7 @@ export function AppShell({
             <div className="p-4 border-t border-[#CBD5E1] dark:border-[#374151] space-y-3 shrink-0">
               {userName && (
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-blue-50 text-[#1D4ED8] dark:bg-blue-950/60 dark:text-[#3B82F6] flex items-center justify-center text-sm font-bold shrink-0">
-                    {userInitial}
-                  </div>
+                  {avatarNode}
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold truncate">{userName}</p>
                     <p className="text-xs font-semibold text-[#1D4ED8] dark:text-[#3B82F6] truncate">
