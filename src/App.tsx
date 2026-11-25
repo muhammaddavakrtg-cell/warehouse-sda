@@ -328,6 +328,10 @@ export default function App() {
       setActiveTab('materials');
     }
   }, [profile, isStaffLevel, activeTab]);
+  useEffect(() => {
+    if (!supabase || !session) return;
+    supabase.rpc('touch_last_active').then(() => {});
+  }, [session?.user?.id]);
 
   const assertCanEdit = useCallback(() => {
     if (!canEdit) {

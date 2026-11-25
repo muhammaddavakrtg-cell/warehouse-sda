@@ -23,6 +23,9 @@ export function ProfilePanel({ profile, onProfileUpdated, onNotify }: ProfilePan
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteText, setDeleteText] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     if (!profile) return;
@@ -209,6 +212,27 @@ export function ProfilePanel({ profile, onProfileUpdated, onNotify }: ProfilePan
     }
   };
 
+    const handleDeleteAccount = async () => {
+    if (!supabase) return;
+
+    if (deleteText.trim().toUpperCase() !== 'HAPUS') {
+      onNotify('error', 'Konfirmasi belum sesuai', 'Ketik HAPUS untuk melanjutkan.');
+      return;
+    }
+
+    setDeletingAccount(true);
+    try {
+      const { error } = await supabase.rpc('delete_my_account');
+      if (error) {
+        throw new Error(error.message || 'Gagal menghapus akun.');
+      }
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (err: any) {
+      onNotify('error', 'Gagal hapus akun', err?.message || 'Terjadi kesalahan.');
+      setDeletingAccount(false);
+    }
+  };
+
   const initialLetter = (profile.fullName || profile.username || 'U').charAt(0).toUpperCase();
 
   return (
@@ -388,6 +412,69 @@ export function ProfilePanel({ profile, onProfileUpdated, onNotify }: ProfilePan
         </form>
       </div>
 
+      {profile.role === 'member' && (
+        <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-2">
+          <h3 className="text-sm font-bold text-red-600 dark:text-red-400">Hapus Akun</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Akun Anda akan dihapus permanen dan tidak dapat dikembalikan. Akun juga dihapus
+            otomatis jika tidak aktif selama 30 hari (peringatan dikirim lewat email lebih dulu).
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setDeleteText('');
+              setDeleteOpen(true);
+            }}
+            className="px-4 py-2 rounded-xl text-xs font-semibold border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950 cursor-pointer"
+          >
+            Hapus Akun Saya
+          </button>
+        </div>
+      )}
+
+      {deleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl text-center space-y-4">
+            <div className="mx-auto w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center text-xl font-bold">
+              !
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Hapus Akun Permanen?
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Tindakan ini tidak dapat dibatalkan. Ketik <strong>HAPUS</strong> untuk konfirmasi.
+              </p>
+            </div>
+            <input
+              type="text"
+              value={deleteText}
+              onChange={(e) => setDeleteText(e.target.value)}
+              placeholder="Ketik HAPUS"
+              className="w-full px-3 py-2 rounded-xl text-sm text-center border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
+            />
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(false)}
+                disabled={deletingAccount}
+                className="py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount || deleteText.trim().toUpperCase() !== 'HAPUS'}
+                className="py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-xs font-bold text-white cursor-pointer"
+              >
+                {deletingAccount ? 'Menghapus...' : 'Ya, Hapus'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Tombol Keluar di bagian bawah */}
       <div className="flex justify-end border-t border-slate-200 dark:border-slate-800 pt-4">
         <button
