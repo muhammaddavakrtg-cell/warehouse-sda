@@ -123,6 +123,7 @@ export default function App() {
   const [txInitialMaterialId, setTxInitialMaterialId] = useState<string | undefined>(undefined);
   const [txChoiceOpen, setTxChoiceOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Material | null>(null);
 
   const [matModalOpen, setMatModalOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
@@ -528,10 +529,8 @@ export default function App() {
     [canEdit, isStaffLevel, materials, pushToast]
   );
 
-  const handleDeleteMaterial = useCallback(
+    const handleDeleteMaterial = useCallback(
     async (material: Material) => {
-      if (!supabase) return;
-
       if (!isStaffLevel || !canEdit) {
         pushToast('info', 'Tidak Diizinkan', 'Hanya Admin atau Staf yang dapat menghapus material.');
         return;
@@ -542,34 +541,33 @@ export default function App() {
         return;
       }
 
-      const confirmed = window.confirm(
-        `Hapus material ${material.qcode} - ${material.name}?\n\nMaterial akan dihapus dari daftar dan dicatat di Riwayat Material Habis.`
-      );
-      if (!confirmed) return;
-
-      const { error } = await supabase.rpc('delete_empty_material', {
-        p_material_id: material.id,
-      });
-
-      if (error) {
-        pushToast('error', 'Gagal menghapus material', error.message);
-        return;
-      }
-
-      await fetchWarehouseData();
-      pushToast(
-        'success',
-        'Material dihapus',
-        `${material.qcode} - ${material.name} dicatat di Riwayat Material Habis.`
-      );
+      setDeleteTarget(material);
     },
-    [canEdit, isStaffLevel, fetchWarehouseData, pushToast]
+    [canEdit, isStaffLevel, pushToast]
   );
 
-  const handleNavigateMaterials = useCallback((statusFilter: StockStatus | 'ALL' = 'ALL') => {
-    setMaterialsStatusFilter(statusFilter);
-    setActiveTab('materials');
-  }, []);
+  const handleConfirmDelete = useCallback(async () => {
+    const material = deleteTarget;
+    if (!material || !supabase) return;
+    setDeleteTarget(null);
+
+    const { error } = await supabase.rpc('delete_empty_material', {
+      p_material_id: material.id,
+    });
+
+    if (error) {
+      pushToast('error', 'Gagal menghapus material', error.message);
+      return;
+    }
+
+    await fetchWarehouseData();
+    pushToast(
+      'success',
+      'Material dihapus',
+      `${material.qcode} - ${material.name} dicatat di Riwayat Material Habis.`
+    );
+  }, [deleteTarget, fetchWarehouseData, pushToast]);
+  }, [];
 
   const handleCreateMaterial = useCallback(
     async (input: CreateMaterialInput) => {
@@ -1084,6 +1082,43 @@ export default function App() {
         onUpdate={handleUpdateMaterial}
       />
 
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl text-center space-y-4">
+            <div className="mx-auto w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center text-xl font-bold">
+              !
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Hapus Material?
+              </h3>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                {deleteTarget.qcode} - {deleteTarget.name}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Material akan dihapus dari daftar dan dicatat di Riwayat Material Habis.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-xs font-bold text-white shadow-xs cursor-pointer"
+              >
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {logoutConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl text-center space-y-4">
