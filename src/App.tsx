@@ -567,6 +567,10 @@ export default function App() {
       `${material.qcode} - ${material.name} dicatat di Riwayat Material Habis.`
     );
   }, [deleteTarget, fetchWarehouseData, pushToast]);
+    const handleNavigateMaterials = useCallback((statusFilter: StockStatus | 'ALL' = 'ALL') => {
+    setMaterialsStatusFilter(statusFilter);
+    setActiveTab('materials');
+  }, []);
 
   const handleCreateMaterial = useCallback(
     async (input: CreateMaterialInput) => {
