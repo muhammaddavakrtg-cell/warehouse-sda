@@ -567,7 +567,6 @@ export default function App() {
       `${material.qcode} - ${material.name} dicatat di Riwayat Material Habis.`
     );
   }, [deleteTarget, fetchWarehouseData, pushToast]);
-  }, [];
 
   const handleCreateMaterial = useCallback(
     async (input: CreateMaterialInput) => {
