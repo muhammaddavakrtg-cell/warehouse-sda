@@ -541,6 +541,8 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
                 id="reg-username"
                 type="text"
                 required
+                minLength={3}
+                maxLength={30}
                 autoComplete="username"
                 value={regUsername}
                 onChange={(e) => setRegUsername(e.target.value)}
@@ -574,10 +576,10 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
                 type="password"
                 required
                 minLength={6}
-                autoComplete="new-password"
+                autoComplete="off"
                 value={regPassword}
                 onChange={(e) => setRegPassword(e.target.value)}
-                placeholder="Minimal 6 karakter"
+                placeholder="Masukkan password"
                 className={INPUT_CLASS}
               />
             </div>
@@ -591,10 +593,10 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
                 type="password"
                 required
                 minLength={6}
-                autoComplete="new-password"
+                autoComplete="off"
                 value={regConfirm}
                 onChange={(e) => setRegConfirm(e.target.value)}
-                placeholder="Ulangi password"
+                placeholder="Masukkan ulang password"
                 className={INPUT_CLASS}
               />
             </div>
