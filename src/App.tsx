@@ -932,6 +932,7 @@ export default function App() {
         userName={profile?.fullName || profile?.username || session.user.email || ''}
         avatarUrl={profile?.avatarUrl || ''}
         roleLabel={getAccessRoleLabel(profile?.role)}
+        isStaffLevel={isStaffLevel}
         onLogout={() => setLogoutConfirmOpen(true)}
         notifications={notifications}
         onOpenNotifications={() => handleNavigateMaterials('ALL')}
