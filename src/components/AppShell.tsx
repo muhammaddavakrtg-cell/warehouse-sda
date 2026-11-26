@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  PackageX,
   Plus,
   UserRound,
   Users,
@@ -20,7 +21,14 @@ import { NotificationBell, type NotificationItem } from './NotificationBell';
 import { ThemeToggle } from './ThemeToggle';
 import { WarehouseAiAssistant } from './WarehouseAiAssistant';
 
-export type NavTab = 'dashboard' | 'materials' | 'logbook' | 'users' | 'activity' | 'profile';
+export type NavTab =
+  | 'dashboard'
+  | 'materials'
+  | 'depleted'
+  | 'logbook'
+  | 'users'
+  | 'activity'
+  | 'profile';
 
 interface AppShellProps {
   activeTab: NavTab;
@@ -48,6 +56,7 @@ interface AppShellProps {
 const NAV_ITEMS: { id: NavTab; label: string; mobileLabel: string; icon: typeof LayoutDashboard }[] = [
   { id: 'dashboard', label: 'Dashboard', mobileLabel: 'Beranda', icon: LayoutDashboard },
   { id: 'materials', label: 'Master Material', mobileLabel: 'Material', icon: Boxes },
+  { id: 'depleted', label: 'Material Habis', mobileLabel: 'Habis', icon: PackageX },
   { id: 'logbook', label: 'Logbook Audit', mobileLabel: 'Logbook', icon: ClipboardList },
   { id: 'users', label: 'Kelola User', mobileLabel: 'User', icon: Users },
   { id: 'activity', label: 'Log Aktivitas', mobileLabel: 'Log', icon: History },
@@ -76,8 +85,9 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const visibleNavItems = NAV_ITEMS.filter(
-    (n) => (n.id !== 'users' && n.id !== 'activity') || canManageUsers
+    (n) => n.id !== 'depleted' && ((n.id !== 'users' && n.id !== 'activity') || canManageUsers)
   );
+  const depletedCount = materials.filter((m) => Number(m.currentStock) <= 0).length;
   const currentTitle = NAV_ITEMS.find((n) => n.id === activeTab)?.label ?? 'Dashboard';
   const userInitial = (userName || 'U').charAt(0).toUpperCase();
   const avatarNode = avatarUrl ? (
@@ -221,6 +231,34 @@ export function AppShell({
                   >
                     <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden="true" />
                     <span>Material Keluar</span>
+                  </button>
+                )}
+
+                {item.id === 'materials' && (
+                  <button
+                    type="button"
+                    onClick={() => onTabChange('depleted')}
+                    className={`w-full flex items-center justify-between pl-9 pr-3.5 py-2 rounded-xl text-sm font-semibold transition-colors duration-150 cursor-pointer whitespace-nowrap ${
+                      activeTab === 'depleted'
+                        ? 'bg-red-600 text-white'
+                        : 'text-[#B91C1C] dark:text-[#F87171] hover:bg-red-50 dark:hover:bg-red-950/30'
+                    }`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <PackageX className="w-4 h-4 shrink-0" aria-hidden="true" />
+                      <span>Material Habis</span>
+                    </span>
+                    {depletedCount > 0 && (
+                      <span
+                        className={`font-mono tabular-nums text-xs font-bold px-1.5 py-0.5 rounded ${
+                          activeTab === 'depleted'
+                            ? 'bg-white/20 text-white'
+                            : 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300'
+                        }`}
+                      >
+                        {depletedCount}
+                      </span>
+                    )}
                   </button>
                 )}
 
@@ -368,6 +406,34 @@ export function AppShell({
                       >
                         <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden="true" />
                         <span>Material Keluar</span>
+                      </button>
+                    )}
+
+                    {item.id === 'materials' && (
+                      <button
+                        type="button"
+                        onClick={() => handleSelectTab('depleted')}
+                        className={`w-full flex items-center justify-between pl-9 pr-3.5 py-2 rounded-xl text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                          activeTab === 'depleted'
+                            ? 'bg-red-600 text-white'
+                            : 'text-[#B91C1C] dark:text-[#F87171] hover:bg-red-50 dark:hover:bg-red-950/30'
+                        }`}
+                      >
+                        <span className="flex items-center gap-3">
+                          <PackageX className="w-4 h-4 shrink-0" aria-hidden="true" />
+                          <span>Material Habis</span>
+                        </span>
+                        {depletedCount > 0 && (
+                          <span
+                            className={`font-mono tabular-nums text-xs font-bold px-1.5 py-0.5 rounded ${
+                              activeTab === 'depleted'
+                                ? 'bg-white/20 text-white'
+                                : 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300'
+                            }`}
+                          >
+                            {depletedCount}
+                          </span>
+                        )}
                       </button>
                     )}
 

@@ -9,6 +9,7 @@ import { MaterialFormModal } from './components/MaterialFormModal';
 import { MaterialsView } from './components/MaterialsView';
 import type { NotificationItem } from './components/NotificationBell';
 import { ProfilePanel } from './components/ProfilePanel';
+import { DepletedMaterialsView } from './components/DepletedMaterialsView';
 import { UserManagementPanel } from './components/UserManagementPanel';
 import { ToastContainer } from './components/ToastContainer';
 import { TransactionModal } from './components/TransactionModal';
@@ -324,10 +325,17 @@ export default function App() {
   const canExport = isStaffLevel;
 
   useEffect(() => {
-    if (profile && !isStaffLevel && activeTab !== 'materials' && activeTab !== 'profile') {
+    if (
+      profile &&
+      !isStaffLevel &&
+      activeTab !== 'materials' &&
+      activeTab !== 'depleted' &&
+      activeTab !== 'profile'
+    ) {
       setActiveTab('materials');
     }
   }, [profile, isStaffLevel, activeTab]);
+
   useEffect(() => {
     if (!supabase || !session) return;
     supabase.rpc('touch_last_active').then(() => {});
@@ -533,7 +541,7 @@ export default function App() {
     [canEdit, isStaffLevel, materials, pushToast]
   );
 
-    const handleDeleteMaterial = useCallback(
+  const handleDeleteMaterial = useCallback(
     async (material: Material) => {
       if (!isStaffLevel || !canEdit) {
         pushToast('info', 'Tidak Diizinkan', 'Hanya Admin atau Staf yang dapat menghapus material.');
@@ -571,7 +579,8 @@ export default function App() {
       `${material.qcode} - ${material.name} dicatat di Riwayat Material Habis.`
     );
   }, [deleteTarget, fetchWarehouseData, pushToast]);
-    const handleNavigateMaterials = useCallback((statusFilter: StockStatus | 'ALL' = 'ALL') => {
+
+  const handleNavigateMaterials = useCallback((statusFilter: StockStatus | 'ALL' = 'ALL') => {
     setMaterialsStatusFilter(statusFilter);
     setActiveTab('materials');
   }, []);
@@ -921,8 +930,6 @@ export default function App() {
         canEdit={canEdit}
         canManageUsers={profile?.role === 'admin' || profile?.role === 'staff'}
         userName={profile?.fullName || profile?.username || session.user.email || ''}
-        roleLabel={getAccessRoleLabel(profile?.role)}
-        userName={profile?.fullName || profile?.username || session.user.email || ''}
         avatarUrl={profile?.avatarUrl || ''}
         roleLabel={getAccessRoleLabel(profile?.role)}
         onLogout={() => setLogoutConfirmOpen(true)}
@@ -994,6 +1001,10 @@ export default function App() {
             }}
             onQuickTransaction={handleOpenTransaction}
           />
+        )}
+
+        {activeTab === 'depleted' && (
+          <DepletedMaterialsView materials={materials} isLoading={isLoading} />
         )}
 
         {activeTab === 'logbook' && isStaffLevel && (
@@ -1125,7 +1136,7 @@ export default function App() {
           </div>
         </div>
       )}
-      
+
       {logoutConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl text-center space-y-4">
