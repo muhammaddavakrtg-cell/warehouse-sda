@@ -83,6 +83,17 @@ const recordActivity = async (event: string) => {
   }
 };
 
+// Domain email yang diizinkan untuk pendaftaran (Google dan Yahoo).
+// Tambahkan domain lain di daftar ini kalau diperlukan.
+const ALLOWED_EMAIL_DOMAINS = [
+  'gmail.com',
+  'googlemail.com',
+  'yahoo.com',
+  'yahoo.co.id',
+  'ymail.com',
+  'rocketmail.com',
+];
+
 const INPUT_CLASS =
   'w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-200 dark:border-slate-700/70 bg-white/60 dark:bg-slate-900/40 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 focus:border-slate-300 dark:focus:border-slate-600';
 const LABEL_CLASS = 'block text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-300';
@@ -239,6 +250,14 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
     if (!/^[a-z0-9._-]{3,30}$/.test(cleanUsername)) {
       setErrorMsg(
         'Username 3-30 karakter, hanya huruf kecil, angka, titik, garis bawah, atau strip (tanpa spasi dan tanpa @).'
+      );
+      return;
+    }
+
+    const emailDomain = cleanEmail.split('@')[1] || '';
+    if (!ALLOWED_EMAIL_DOMAINS.includes(emailDomain)) {
+      setErrorMsg(
+        'Gunakan email aktif dari Google (Gmail) atau Yahoo. Email di luar itu tidak dapat didaftarkan.'
       );
       return;
     }
