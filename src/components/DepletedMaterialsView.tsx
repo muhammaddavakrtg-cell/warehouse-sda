@@ -31,7 +31,7 @@ export function DepletedMaterialsView({ materials, isLoading = false }: Depleted
     const q = query.trim().toLowerCase();
     if (!q) return depleted;
     return depleted.filter((m) =>
-      [m.qcode, m.name, m.category, m.location, m.description]
+      [m.qcode, m.name, m.category, m.unit, m.description]
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(q))
     );
@@ -60,7 +60,7 @@ export function DepletedMaterialsView({ materials, isLoading = false }: Depleted
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Cari kode, nama, kategori, atau lokasi"
+          placeholder="Cari kode, nama, kategori, atau UoM"
           className="w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600"
         />
       </div>
@@ -93,7 +93,7 @@ export function DepletedMaterialsView({ materials, isLoading = false }: Depleted
                   <th className="px-4 py-3">QCODE</th>
                   <th className="px-4 py-3">Nama Material</th>
                   <th className="px-4 py-3">Kategori</th>
-                  <th className="px-4 py-3">Lokasi</th>
+                  <th className="px-4 py-3">UoM</th>
                   <th className="px-4 py-3 text-right">Stok Minimum</th>
                   <th className="px-4 py-3">Diperbarui</th>
                 </tr>
@@ -119,7 +119,7 @@ export function DepletedMaterialsView({ materials, isLoading = false }: Depleted
                       {m.category || '-'}
                     </td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                      {m.location || '-'}
+                      {m.unit || '-'}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-slate-600 dark:text-slate-300 whitespace-nowrap">
                       {m.minStock} {m.unit}
@@ -159,9 +159,9 @@ export function DepletedMaterialsView({ materials, isLoading = false }: Depleted
                   <dd className="text-slate-800 dark:text-slate-200 text-right">
                     {m.category || '-'}
                   </dd>
-                  <dt className="text-slate-500 dark:text-slate-400">Lokasi</dt>
+                  <dt className="text-slate-500 dark:text-slate-400">UoM</dt>
                   <dd className="text-slate-800 dark:text-slate-200 text-right">
-                    {m.location || '-'}
+                    {m.unit || '-'}
                   </dd>
                   <dt className="text-slate-500 dark:text-slate-400">Stok minimum</dt>
                   <dd className="text-slate-800 dark:text-slate-200 text-right tabular-nums">
