@@ -224,18 +224,25 @@ export function AppShell({
           sidebarCollapsed ? 'lg:w-[4.5rem]' : 'lg:w-64'
         }`}
       >
-        <div className={`px-3 pt-3 flex ${sidebarCollapsed ? 'justify-center' : 'justify-end'}`}>
+        <div className={`pt-3 flex ${sidebarCollapsed ? 'px-2 justify-center' : 'px-3'}`}>
           <button
             type="button"
             onClick={toggleSidebar}
             aria-label={sidebarCollapsed ? 'Perluas menu' : 'Perkecil menu'}
             title={sidebarCollapsed ? 'Perluas menu' : 'Perkecil menu'}
-            className="w-9 h-9 rounded-xl border border-[#CBD5E1] dark:border-[#374151] flex items-center justify-center text-[#334155] dark:text-[#D1D5DB] hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+            className={`h-9 rounded-xl border border-[#CBD5E1] dark:border-[#374151] flex items-center text-[#334155] dark:text-[#D1D5DB] hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors cursor-pointer whitespace-nowrap ${
+              sidebarCollapsed
+                ? 'w-9 justify-center'
+                : 'w-full px-3.5 gap-3 justify-start text-sm font-semibold'
+            }`}
           >
             {sidebarCollapsed ? (
-              <PanelLeftOpen className="w-4 h-4" aria-hidden="true" />
+              <PanelLeftOpen className="w-4 h-4 shrink-0" aria-hidden="true" />
             ) : (
-              <PanelLeftClose className="w-4 h-4" aria-hidden="true" />
+              <>
+                <PanelLeftClose className="w-4 h-4 shrink-0" aria-hidden="true" />
+                <span>Perkecil Menu</span>
+              </>
             )}
           </button>
         </div>
