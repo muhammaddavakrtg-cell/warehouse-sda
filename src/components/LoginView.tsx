@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { BrandLogo } from './BrandLogo';
 
 type ThemeMode = 'system' | 'light' | 'dark';
 
@@ -95,10 +96,16 @@ const ALLOWED_EMAIL_DOMAINS = [
 ];
 
 const INPUT_CLASS =
-  'w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-200 dark:border-slate-700/70 bg-white/60 dark:bg-slate-900/40 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-600 focus:border-slate-300 dark:focus:border-slate-600';
-const LABEL_CLASS = 'block text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-300';
+  'w-full h-12 px-3.5 rounded-xl text-[15px] border border-slate-400 dark:border-slate-500 bg-surface text-ink placeholder:text-ink-soft/70 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand';
+const LABEL_CLASS = 'block text-sm font-semibold mb-1.5 text-ink';
 const PRIMARY_BTN_CLASS =
-  'w-full py-2.5 px-4 rounded-xl text-sm font-bold bg-slate-600 hover:bg-slate-700 dark:bg-slate-600 dark:hover:bg-slate-500 disabled:opacity-60 text-white transition cursor-pointer';
+  'w-full h-12 px-4 rounded-xl text-[15px] font-bold bg-brand text-brand-ink hover:brightness-110 disabled:opacity-60 transition cursor-pointer';
+
+const BENEFITS = [
+  'Cari dan lihat stok material kapan saja',
+  'Catat barang masuk dan keluar dengan cepat',
+  'Pantau material yang menipis atau habis',
+];
 
 export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginViewProps) {
   const [mode, setMode] = useState<Mode>('login');
@@ -368,30 +375,71 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
     }
   };
 
+  const heading =
+    mode === 'login' ? 'Selamat datang kembali' : mode === 'register' ? 'Buat akun baru' : 'Lupa password?';
+
   const subtitle =
     mode === 'login'
-      ? group === 'staff'
-        ? 'Masuk sebagai Admin atau Staf'
-        : 'Masuk sebagai Karyawan'
+      ? 'Masuk untuk melanjutkan pekerjaan Anda.'
       : mode === 'register'
-        ? 'Buat akun baru'
+        ? 'Lengkapi data di bawah ini.'
         : 'Reset password melalui email terdaftar';
 
   const tabClass = (active: boolean) =>
-    `py-2 rounded-lg text-sm font-semibold transition cursor-pointer ${
-      active
-        ? 'bg-white/80 text-slate-800 shadow-sm dark:bg-slate-700/60 dark:text-slate-100'
-        : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+    `min-h-[44px] py-2.5 rounded-lg text-sm font-semibold transition cursor-pointer ${
+      active ? 'bg-surface text-ink shadow-sm' : 'text-ink-soft hover:text-ink'
     }`;
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center px-4 py-8 bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200/70 dark:border-slate-700/50 bg-slate-50/80 dark:bg-slate-800/50 p-6 sm:p-8">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-surface-2 text-ink">
+      <section className="lg:flex-[1.1] bg-[#1B3A8F] dark:bg-[#0F1F4D] text-white px-6 py-5 lg:p-14 flex flex-col lg:justify-between gap-8">
+        <div className="flex items-center gap-3">
+          <span className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shrink-0">
+            <BrandLogo className="w-8 h-8" />
+          </span>
+          <div className="font-display text-base font-extrabold leading-tight">
+            <span className="block">Inventory Material</span>
+            <span className="block">SD Plant</span>
+          </div>
+        </div>
+
+        <div className="hidden lg:block">
+          <h1 className="font-display text-[44px] leading-[1.15] font-extrabold tracking-tight max-w-md">
+            Stok gudang terbaca dalam satu layar.
+          </h1>
+          <ul className="mt-7 space-y-3.5 text-[17px] font-medium">
+            {BENEFITS.map((text) => (
+              <li key={text} className="flex items-center gap-3">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  className="shrink-0"
+                >
+                  <path d="M5 12l5 5L20 7" />
+                </svg>
+                {text}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="hidden lg:block text-sm text-blue-100">Khusus karyawan SD Plant</p>
+      </section>
+
+      <section className="flex-1 flex items-center justify-center px-5 py-8 sm:p-12">
+        <div className="w-full max-w-[400px]">
         <div className="flex justify-end mb-4">
           <div
             role="group"
             aria-label="Pilihan tema"
-            className="inline-flex p-0.5 rounded-xl bg-slate-200/60 dark:bg-slate-900/40"
+            className="inline-flex p-0.5 rounded-xl bg-[#DCE3EE] dark:bg-surface border border-line"
           >
             {THEME_OPTIONS.map((opt) => (
               <button
@@ -403,8 +451,8 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
                 title={opt.label}
                 className={`flex items-center justify-center w-8 h-7 rounded-lg transition cursor-pointer ${
                   themeMode === opt.value
-                    ? 'bg-white/80 text-slate-800 shadow-sm dark:bg-slate-700/60 dark:text-slate-100'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                    ? 'bg-surface text-ink shadow-sm'
+                    : 'text-ink-soft hover:text-ink'
                 }`}
               >
                 {opt.icon}
@@ -413,17 +461,15 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
           </div>
         </div>
 
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Inventory Warehouse</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>
-          </div>
+        <div className="mb-6">
+          <h2 className="font-display text-[28px] font-extrabold tracking-tight">{heading}</h2>
+          <p className="mt-1 text-[15px] text-ink-soft">{subtitle}</p>
         </div>
 
         {(!supabase || !isSupabaseConfigured) && (
           <div
             role="alert"
-            className="mb-4 p-3 rounded-xl text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
+            className="mb-4 p-3 rounded-xl text-sm font-semibold bg-warn-soft text-warn border border-warn/30"
           >
             Variabel <strong>VITE_SUPABASE_URL</strong> dan <strong>VITE_SUPABASE_ANON_KEY</strong>{' '}
             belum terbaca pada build ini.
@@ -433,7 +479,7 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
         {errorMsg && (
           <div
             role="alert"
-            className="mb-4 p-3 rounded-xl text-xs font-semibold bg-red-100 text-red-700 border border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800"
+            className="mb-4 p-3 rounded-xl text-sm font-semibold bg-out-soft text-out border border-out/30"
           >
             {errorMsg}
           </div>
@@ -442,14 +488,14 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
         {infoMsg && (
           <div
             role="status"
-            className="mb-4 p-3 rounded-xl text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800"
+            className="mb-4 p-3 rounded-xl text-sm font-semibold bg-ok-soft text-ok border border-ok/30"
           >
             {infoMsg}
           </div>
         )}
 
         {mode === 'login' && (
-          <div className="grid grid-cols-2 gap-1 p-1 mb-5 rounded-xl bg-slate-200/60 dark:bg-slate-900/40">
+          <div className="grid grid-cols-2 gap-1 p-1 mb-5 rounded-xl bg-[#DCE3EE] dark:bg-surface border border-line">
             <button
               type="button"
               onClick={() => switchGroup('staff')}
@@ -489,14 +535,14 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
               <div className="flex items-center justify-between mb-1.5">
                 <label
                   htmlFor="login-password"
-                  className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
+                  className="block text-sm font-semibold text-ink"
                 >
                   Password
                 </label>
                 <button
                   type="button"
                   onClick={() => goToMode('forgot')}
-                  className="text-xs font-semibold text-slate-600 hover:underline dark:text-slate-300 cursor-pointer"
+                  className="text-sm font-semibold text-brand hover:underline cursor-pointer"
                 >
                   Lupa password?
                 </button>
@@ -521,12 +567,12 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
               {isSubmitting ? 'Memproses masuk...' : 'Masuk'}
             </button>
 
-            <p className="text-center text-xs text-slate-600 dark:text-slate-400">
+            <p className="text-center text-sm text-ink-soft">
               Belum punya akun?{' '}
               <button
                 type="button"
                 onClick={() => goToMode('register')}
-                className="font-semibold text-slate-600 hover:underline dark:text-slate-300 cursor-pointer"
+                className="font-semibold text-brand hover:underline cursor-pointer"
               >
                 Daftar
               </button>
@@ -620,7 +666,7 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
               />
             </div>
 
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-ink-soft">
               Akun baru berlevel Member (hanya lihat). Admin dapat menaikkan level akun Anda.
             </p>
 
@@ -635,7 +681,7 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
             <button
               type="button"
               onClick={() => goToMode('login')}
-              className="w-full py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white cursor-pointer"
+              className="w-full py-2.5 text-sm font-semibold text-ink-soft hover:text-ink cursor-pointer"
             >
               ← Sudah punya akun? Masuk
             </button>
@@ -671,14 +717,15 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
             <button
               type="button"
               onClick={() => goToMode('login')}
-              className="w-full py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white cursor-pointer"
+              className="w-full py-2.5 text-sm font-semibold text-ink-soft hover:text-ink cursor-pointer"
             >
               ← Kembali ke halaman login
             </button>
           </form>
         )}
 
-      </div>
+        </div>
+      </section>
 
       {popup && (
         <div
@@ -686,9 +733,9 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-sm rounded-2xl border border-slate-200/70 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800 p-6 text-center shadow-lg">
+          <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-6 text-center shadow-lg">
             <h2 className="text-lg font-bold mb-2">Perhatian</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mb-5">{popup.message}</p>
+            <p className="text-sm text-ink-soft mb-5">{popup.message}</p>
             <button
               type="button"
               onClick={() => {
