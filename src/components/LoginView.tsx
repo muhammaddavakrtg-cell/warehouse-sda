@@ -96,10 +96,10 @@ const ALLOWED_EMAIL_DOMAINS = [
 ];
 
 const INPUT_CLASS =
-  'w-full h-12 px-3.5 rounded-xl text-[15px] border border-slate-400 dark:border-slate-500 bg-surface text-ink placeholder:text-ink-soft/70 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand';
-const LABEL_CLASS = 'block text-sm font-semibold mb-1.5 text-ink';
+  'w-full h-14 px-4 rounded-xl text-[17px] border border-slate-400 dark:border-slate-500 bg-surface text-ink placeholder:text-ink-soft/70 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand';
+const LABEL_CLASS = 'block text-base font-semibold mb-2 text-ink';
 const PRIMARY_BTN_CLASS =
-  'w-full h-12 px-4 rounded-xl text-[15px] font-bold bg-brand text-brand-ink hover:brightness-110 disabled:opacity-60 transition cursor-pointer';
+  'w-full h-14 px-4 rounded-xl text-[17px] font-bold bg-brand text-brand-ink hover:brightness-110 disabled:opacity-60 transition cursor-pointer';
 
 const BENEFITS = [
   'Cari dan lihat stok material kapan saja',
@@ -386,33 +386,30 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
         : 'Reset password melalui email terdaftar';
 
   const tabClass = (active: boolean) =>
-    `min-h-[44px] py-2.5 rounded-lg text-sm font-semibold transition cursor-pointer ${
+    `min-h-[52px] py-3 rounded-lg text-base font-semibold transition cursor-pointer ${
       active ? 'bg-surface text-ink shadow-sm' : 'text-ink-soft hover:text-ink'
     }`;
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-surface-2 text-ink">
       <section className="lg:flex-[1.1] bg-[#1B3A8F] dark:bg-[#0F1F4D] text-white px-6 py-5 lg:p-14 flex flex-col lg:justify-between gap-8">
-        <div className="flex items-center gap-3">
-          <span className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shrink-0">
-            <BrandLogo className="w-8 h-8" />
+        <div className="flex items-center gap-3 sm:gap-4">
+          <BrandLogo className="w-12 h-12 sm:w-16 sm:h-16 shrink-0" />
+          <span className="font-display text-base sm:text-xl lg:text-2xl font-extrabold leading-none whitespace-nowrap">
+            Inventory Material SD Plant
           </span>
-          <div className="font-display text-base font-extrabold leading-tight">
-            <span className="block">Inventory Material</span>
-            <span className="block">SD Plant</span>
-          </div>
         </div>
 
         <div className="hidden lg:block">
-          <h1 className="font-display text-[44px] leading-[1.15] font-extrabold tracking-tight max-w-md">
+          <h1 className="font-display text-[54px] leading-[1.1] font-extrabold tracking-tight max-w-xl">
             Stok gudang terbaca dalam satu layar.
           </h1>
-          <ul className="mt-7 space-y-3.5 text-[17px] font-medium">
+          <ul className="mt-9 space-y-4 text-xl font-medium">
             {BENEFITS.map((text) => (
               <li key={text} className="flex items-center gap-3">
                 <svg
-                  width="20"
-                  height="20"
+                  width="24"
+                  height="24"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -430,11 +427,11 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
           </ul>
         </div>
 
-        <p className="hidden lg:block text-sm text-blue-100">Khusus karyawan SD Plant</p>
+        <p className="hidden lg:block text-base text-blue-100">Khusus karyawan SD Plant</p>
       </section>
 
       <section className="flex-1 flex items-center justify-center px-5 py-8 sm:p-12">
-        <div className="w-full max-w-[400px]">
+        <div className="w-full max-w-[460px]">
         <div className="flex justify-end mb-4">
           <div
             role="group"
@@ -462,14 +459,14 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
         </div>
 
         <div className="mb-6">
-          <h2 className="font-display text-[28px] font-extrabold tracking-tight">{heading}</h2>
-          <p className="mt-1 text-[15px] text-ink-soft">{subtitle}</p>
+          <h2 className="font-display text-[34px] font-extrabold tracking-tight">{heading}</h2>
+          <p className="mt-1.5 text-[17px] text-ink-soft">{subtitle}</p>
         </div>
 
         {(!supabase || !isSupabaseConfigured) && (
           <div
             role="alert"
-            className="mb-4 p-3 rounded-xl text-sm font-semibold bg-warn-soft text-warn border border-warn/30"
+            className="mb-4 p-3.5 rounded-xl text-base font-semibold bg-warn-soft text-warn border border-warn/30"
           >
             Variabel <strong>VITE_SUPABASE_URL</strong> dan <strong>VITE_SUPABASE_ANON_KEY</strong>{' '}
             belum terbaca pada build ini.
@@ -479,7 +476,7 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
         {errorMsg && (
           <div
             role="alert"
-            className="mb-4 p-3 rounded-xl text-sm font-semibold bg-out-soft text-out border border-out/30"
+            className="mb-4 p-3.5 rounded-xl text-base font-semibold bg-out-soft text-out border border-out/30"
           >
             {errorMsg}
           </div>
@@ -488,7 +485,7 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
         {infoMsg && (
           <div
             role="status"
-            className="mb-4 p-3 rounded-xl text-sm font-semibold bg-ok-soft text-ok border border-ok/30"
+            className="mb-4 p-3.5 rounded-xl text-base font-semibold bg-ok-soft text-ok border border-ok/30"
           >
             {infoMsg}
           </div>
@@ -535,14 +532,14 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
               <div className="flex items-center justify-between mb-1.5">
                 <label
                   htmlFor="login-password"
-                  className="block text-sm font-semibold text-ink"
+                  className="block text-base font-semibold text-ink"
                 >
                   Password
                 </label>
                 <button
                   type="button"
                   onClick={() => goToMode('forgot')}
-                  className="text-sm font-semibold text-brand hover:underline cursor-pointer"
+                  className="text-base font-semibold text-brand hover:underline cursor-pointer"
                 >
                   Lupa password?
                 </button>
@@ -567,7 +564,7 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
               {isSubmitting ? 'Memproses masuk...' : 'Masuk'}
             </button>
 
-            <p className="text-center text-sm text-ink-soft">
+            <p className="text-center text-base text-ink-soft">
               Belum punya akun?{' '}
               <button
                 type="button"
@@ -666,7 +663,7 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
               />
             </div>
 
-            <p className="text-xs text-ink-soft">
+            <p className="text-sm text-ink-soft">
               Akun baru berlevel Member (hanya lihat). Admin dapat menaikkan level akun Anda.
             </p>
 
@@ -681,7 +678,7 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
             <button
               type="button"
               onClick={() => goToMode('login')}
-              className="w-full py-2.5 text-sm font-semibold text-ink-soft hover:text-ink cursor-pointer"
+              className="w-full py-3 text-base font-semibold text-ink-soft hover:text-ink cursor-pointer"
             >
               ← Sudah punya akun? Masuk
             </button>
@@ -717,7 +714,7 @@ export function LoginView({ themeMode, onThemeModeChange, onLoginGuard }: LoginV
             <button
               type="button"
               onClick={() => goToMode('login')}
-              className="w-full py-2.5 text-sm font-semibold text-ink-soft hover:text-ink cursor-pointer"
+              className="w-full py-3 text-base font-semibold text-ink-soft hover:text-ink cursor-pointer"
             >
               ← Kembali ke halaman login
             </button>
